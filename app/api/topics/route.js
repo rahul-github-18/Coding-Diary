@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view, can_edit, can_delete FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view, can_edit, can_delete')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function GET(req) {
@@ -26,71 +31,65 @@ export async function GET(req) {
     const difficulty = searchParams.get('difficulty') || '';
     const category = searchParams.get('category') || '';
 
-    // Build query
-    let sql = 'SELECT * FROM topics WHERE 1=1';
-    const params = [];
-    let paramIndex = 1;
+    // Query todos table in Supabase
+    let query = supabase.from('todos').select('*');
 
     if (search) {
-      sql += ` AND (title ILIKE $${paramIndex} OR category ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
+      query = query.or(`title.ilike.%${search}%,category.ilike.%${search}%`);
     }
 
     if (difficulty) {
-      sql += ` AND difficulty = $${paramIndex}`;
-      params.push(difficulty);
-      paramIndex++;
+      query = query.eq('difficulty', difficulty);
     }
 
     if (category) {
-      sql += ` AND category = $${paramIndex}`;
-      params.push(category);
-      paramIndex++;
+      query = query.eq('category', category);
     }
 
-    sql += ' ORDER BY id DESC';
+    const { data: todos, error: todosError } = await query.order('id', { ascending: false });
+    if (todosError) throw todosError;
 
-    const topicsRes = await query(sql, params);
-    const topics = topicsRes.rows;
+    // Fetch user completed tasks
+    const { data: completedTasks, error: tasksError } = await supabase
+      .from('user_tasks')
+      .select('item_type, item_id, status')
+      .eq('user_id', user.id)
+      .eq('status', 'Completed');
 
-    // Fetch all user completed tasks for progress calculation
-    const tasksRes = await query(
-      "SELECT item_type, item_id, status FROM user_tasks WHERE user_id = $1 AND status = 'Completed'",
-      [user.id]
-    );
-    const completedTasks = tasksRes.rows;
+    if (tasksError) throw tasksError;
 
-    // Fetch questions, code examples, notes counts grouped by topic_id to compute progress
-    const questionsRes = await query("SELECT topic_id, COUNT(id) as count FROM questions GROUP BY topic_id");
-    const examplesRes = await query("SELECT topic_id, COUNT(id) as count FROM code_examples GROUP BY topic_id");
-    const notesRes = await query("SELECT topic_id, COUNT(id) as count FROM notes GROUP BY topic_id");
+    // Fetch items counts to compute progress
+    const { data: allQuestions, error: qError } = await supabase.from('questions').select('id, todo_id');
+    const { data: allExamples, error: eError } = await supabase.from('code_examples').select('id, topic_id');
+    const { data: allNotes, error: nError } = await supabase.from('notes').select('id, topic_id');
 
+    if (qError) throw qError;
+    if (eError) throw eError;
+    if (nError) throw nError;
+
+    // Maps for counting items per todo (topic)
     const questionsCountMap = {};
-    questionsRes.rows.forEach(r => { questionsCountMap[r.topic_id] = parseInt(r.count, 10); });
     const examplesCountMap = {};
-    examplesRes.rows.forEach(r => { examplesCountMap[r.topic_id] = parseInt(r.count, 10); });
     const notesCountMap = {};
-    notesRes.rows.forEach(r => { notesCountMap[r.topic_id] = parseInt(r.count, 10); });
-
-    // Fetch user-completed items counts per topic
-    // First, let's list all items per topic
-    const allQuestions = await query("SELECT id, topic_id FROM questions");
-    const allExamples = await query("SELECT id, topic_id FROM code_examples");
-    const allNotes = await query("SELECT id, topic_id FROM notes");
 
     const topicQuestionsMap = {};
-    allQuestions.rows.forEach(q => {
-      if (!topicQuestionsMap[q.topic_id]) topicQuestionsMap[q.topic_id] = [];
-      topicQuestionsMap[q.topic_id].push(q.id);
-    });
     const topicExamplesMap = {};
-    allExamples.rows.forEach(e => {
+    const topicNotesMap = {};
+
+    allQuestions.forEach(q => {
+      questionsCountMap[q.todo_id] = (questionsCountMap[q.todo_id] || 0) + 1;
+      if (!topicQuestionsMap[q.todo_id]) topicQuestionsMap[q.todo_id] = [];
+      topicQuestionsMap[q.todo_id].push(q.id);
+    });
+
+    allExamples.forEach(e => {
+      examplesCountMap[e.topic_id] = (examplesCountMap[e.topic_id] || 0) + 1;
       if (!topicExamplesMap[e.topic_id]) topicExamplesMap[e.topic_id] = [];
       topicExamplesMap[e.topic_id].push(e.id);
     });
-    const topicNotesMap = {};
-    allNotes.rows.forEach(n => {
+
+    allNotes.forEach(n => {
+      notesCountMap[n.topic_id] = (notesCountMap[n.topic_id] || 0) + 1;
       if (!topicNotesMap[n.topic_id]) topicNotesMap[n.topic_id] = [];
       topicNotesMap[n.topic_id].push(n.id);
     });
@@ -100,41 +99,40 @@ export async function GET(req) {
     const completedNoteIds = new Set(completedTasks.filter(t => t.item_type === 'note').map(t => t.item_id));
     const completedTopicIds = new Set(completedTasks.filter(t => t.item_type === 'topic').map(t => t.item_id));
 
-    // Enhance topics with progress
-    const enhancedTopics = topics.map(topic => {
-      const qTotal = questionsCountMap[topic.id] || 0;
-      const eTotal = examplesCountMap[topic.id] || 0;
-      const nTotal = notesCountMap[topic.id] || 0;
+    const enhancedTopics = (todos || []).map(todo => {
+      const qTotal = questionsCountMap[todo.id] || 0;
+      const eTotal = examplesCountMap[todo.id] || 0;
+      const nTotal = notesCountMap[todo.id] || 0;
       const totalItems = qTotal + eTotal + nTotal;
 
       let completedItems = 0;
-      if (topicQuestionsMap[topic.id]) {
-        topicQuestionsMap[topic.id].forEach(qId => {
+      if (topicQuestionsMap[todo.id]) {
+        topicQuestionsMap[todo.id].forEach(qId => {
           if (completedQuestionIds.has(qId)) completedItems++;
         });
       }
-      if (topicExamplesMap[topic.id]) {
-        topicExamplesMap[topic.id].forEach(eId => {
+      if (topicExamplesMap[todo.id]) {
+        topicExamplesMap[todo.id].forEach(eId => {
           if (completedExampleIds.has(eId)) completedItems++;
         });
       }
-      if (topicNotesMap[topic.id]) {
-        topicNotesMap[topic.id].forEach(nId => {
+      if (topicNotesMap[todo.id]) {
+        topicNotesMap[todo.id].forEach(nId => {
           if (completedNoteIds.has(nId)) completedItems++;
         });
       }
 
       const percentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-      
+
       return {
-        ...topic,
+        ...todo,
         total_questions: qTotal,
         total_examples: eTotal,
         total_notes: nTotal,
         completed_items: completedItems,
         total_items: totalItems,
         progress_percentage: percentage,
-        completed: completedTopicIds.has(topic.id) || (totalItems > 0 && completedItems === totalItems)
+        completed: completedTopicIds.has(todo.id) || (totalItems > 0 && completedItems === totalItems)
       };
     });
 
@@ -158,14 +156,20 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Topic title is required.' }, { status: 400 });
     }
 
-    const insertRes = await query(
-      `INSERT INTO topics (title, category, difficulty, estimated_time)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [title.trim(), category || 'General', difficulty || 'Beginner', estimatedTime || '1 hour']
-    );
+    const { data: newTodo, error: insertError } = await supabase
+      .from('todos')
+      .insert({
+        title: title.trim(),
+        category: category || 'General',
+        difficulty: difficulty || 'Beginner',
+        estimated_time: estimatedTime || '1 hour'
+      })
+      .select()
+      .single();
 
-    return NextResponse.json(insertRes.rows[0], { status: 201 });
+    if (insertError) throw insertError;
+
+    return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
     console.error('POST topic error:', error);
     return NextResponse.json({ message: 'Failed to create topic.' }, { status: 500 });

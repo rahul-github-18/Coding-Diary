@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function DELETE(req, { params }) {
@@ -22,9 +27,14 @@ export async function DELETE(req, { params }) {
     }
 
     const { id } = params;
-    const deleteRes = await query('DELETE FROM shared_codes WHERE id = $1 RETURNING id', [id]);
+    const { data: deletedSnippet, error } = await supabase
+      .from('shared_codes')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
 
-    if (deleteRes.rows.length === 0) {
+    if (error || !deletedSnippet) {
       return NextResponse.json({ message: 'Shared code not found or already expired.' }, { status: 404 });
     }
 

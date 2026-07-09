@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, streak, last_activity_date FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, streak, last_activity_date')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function PUT(req, { params }) {
@@ -25,11 +30,16 @@ export async function PUT(req, { params }) {
     const { status, saved_for_later } = await req.json();
 
     // Fetch existing task
-    const checkRes = await query('SELECT * FROM user_tasks WHERE id = $1 AND user_id = $2', [id, user.id]);
-    if (checkRes.rows.length === 0) {
+    const { data: task, error: fetchError } = await supabase
+      .from('user_tasks')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (fetchError || !task) {
       return NextResponse.json({ message: 'Task not found.' }, { status: 404 });
     }
-    const task = checkRes.rows[0];
 
     const newStatus = status !== undefined ? status : task.status;
     const newSavedForLater = saved_for_later !== undefined ? saved_for_later : task.saved_for_later;
@@ -47,10 +57,10 @@ export async function PUT(req, { params }) {
       const today = new Date();
       // Format to YYYY-MM-DD
       const offset = today.getTimezoneOffset();
-      const localToday = new Date(today.getTime() - (offset*60*1000));
+      const localToday = new Date(today.getTime() - (offset * 60 * 1000));
       const todayStr = localToday.toISOString().split('T')[0];
 
-      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000 - (offset*60*1000));
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000 - (offset * 60 * 1000));
       const yesterdayStr = yesterday.toISOString().split('T')[0];
 
       let dbLastActivityStr = null;
@@ -78,23 +88,34 @@ export async function PUT(req, { params }) {
     }
 
     // Update user_tasks
-    const updateTaskRes = await query(
-      `UPDATE user_tasks 
-       SET status = $1, saved_for_later = $2, completed_at = $3
-       WHERE id = $4 AND user_id = $5
-       RETURNING *`,
-      [newStatus, newSavedForLater, completedAt, id, user.id]
-    );
+    const { data: updatedTask, error: updateError } = await supabase
+      .from('user_tasks')
+      .update({
+        status: newStatus,
+        saved_for_later: newSavedForLater,
+        completed_at: completedAt
+      })
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
 
     // Update user streak if it changed
     if (streakUpdated) {
-      await query(
-        'UPDATE users SET streak = $1, last_activity_date = $2 WHERE id = $3',
-        [newStreak, newLastActivityDate, user.id]
-      );
+      const { error: userUpdateError } = await supabase
+        .from('users')
+        .update({
+          streak: newStreak,
+          last_activity_date: newLastActivityDate
+        })
+        .eq('id', user.id);
+
+      if (userUpdateError) throw userUpdateError;
     }
 
-    return NextResponse.json(updateTaskRes.rows[0]);
+    return NextResponse.json(updatedTask);
   } catch (error) {
     console.error('PUT user task error:', error);
     return NextResponse.json({ message: 'Failed to update task.' }, { status: 500 });
@@ -109,9 +130,15 @@ export async function DELETE(req, { params }) {
     }
 
     const { id } = params;
-    const deleteRes = await query('DELETE FROM user_tasks WHERE id = $1 AND user_id = $2 RETURNING id', [id, user.id]);
+    const { data: deletedTask, error } = await supabase
+      .from('user_tasks')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select('id')
+      .maybeSingle();
 
-    if (deleteRes.rows.length === 0) {
+    if (error || !deletedTask) {
       return NextResponse.json({ message: 'Task not found.' }, { status: 404 });
     }
 

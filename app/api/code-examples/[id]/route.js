@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view, can_edit, can_delete FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view, can_edit, can_delete')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function PUT(req, { params }) {
@@ -24,11 +29,15 @@ export async function PUT(req, { params }) {
     const { id } = params;
     const { title, language, code, explanation, notes } = await req.json();
 
-    const checkRes = await query('SELECT * FROM code_examples WHERE id = $1', [id]);
-    if (checkRes.rows.length === 0) {
+    const { data: example, error: fetchError } = await supabase
+      .from('code_examples')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !example) {
       return NextResponse.json({ message: 'Code example not found.' }, { status: 404 });
     }
-    const example = checkRes.rows[0];
 
     const newTitle = title !== undefined ? title : example.title;
     const newLanguage = language !== undefined ? language : example.language;
@@ -40,15 +49,22 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ message: 'Code block cannot be empty.' }, { status: 400 });
     }
 
-    const updateRes = await query(
-      `UPDATE code_examples 
-       SET title = $1, language = $2, code = $3, explanation = $4, notes = $5
-       WHERE id = $6
-       RETURNING *`,
-      [newTitle, newLanguage, newCode, newExplanation, newNotes, id]
-    );
+    const { data: updatedExample, error: updateError } = await supabase
+      .from('code_examples')
+      .update({
+        title: newTitle,
+        language: newLanguage,
+        code: newCode,
+        explanation: newExplanation,
+        notes: newNotes
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-    return NextResponse.json(updateRes.rows[0]);
+    if (updateError) throw updateError;
+
+    return NextResponse.json(updatedExample);
   } catch (error) {
     console.error('PUT code example error:', error);
     return NextResponse.json({ message: 'Failed to update code example.' }, { status: 500 });
@@ -63,9 +79,14 @@ export async function DELETE(req, { params }) {
     }
 
     const { id } = params;
-    const deleteRes = await query('DELETE FROM code_examples WHERE id = $1 RETURNING id', [id]);
+    const { data: deletedExample, error } = await supabase
+      .from('code_examples')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
 
-    if (deleteRes.rows.length === 0) {
+    if (error || !deletedExample) {
       return NextResponse.json({ message: 'Code example not found.' }, { status: 404 });
     }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view, can_edit, can_delete FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view, can_edit, can_delete')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function GET(req, { params }) {
@@ -23,30 +28,44 @@ export async function GET(req, { params }) {
 
     const { id } = params; // topic_id
 
-    // Check if topic exists
-    const topicRes = await query('SELECT id FROM topics WHERE id = $1', [id]);
-    if (topicRes.rows.length === 0) {
+    // Check if topic exists (todos table)
+    const { data: topic, error: topicError } = await supabase
+      .from('todos')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (topicError || !topic) {
       return NextResponse.json({ message: 'Topic not found.' }, { status: 404 });
     }
 
-    // Fetch questions
-    const questionsRes = await query('SELECT * FROM questions WHERE topic_id = $1 ORDER BY id ASC', [id]);
+    // Fetch questions (questions table has todo_id column)
+    const { data: questions, error: qError } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('todo_id', id)
+      .order('id', { ascending: true });
+
+    if (qError) throw qError;
 
     // Fetch user completion status for these questions
-    const tasksRes = await query(
-      "SELECT item_id, status, saved_for_later FROM user_tasks WHERE user_id = $1 AND item_type = 'question'",
-      [user.id]
-    );
+    const { data: tasks, error: tasksError } = await supabase
+      .from('user_tasks')
+      .select('item_id, status, saved_for_later')
+      .eq('user_id', user.id)
+      .eq('item_type', 'question');
+
+    if (tasksError) throw tasksError;
     
     const taskMap = {};
-    tasksRes.rows.forEach(t => {
+    tasks.forEach(t => {
       taskMap[t.item_id] = {
         status: t.status,
         saved_for_later: t.saved_for_later
       };
     });
 
-    const enrichedQuestions = questionsRes.rows.map(q => ({
+    const enrichedQuestions = (questions || []).map(q => ({
       ...q,
       status: taskMap[q.id]?.status || 'Pending',
       saved_for_later: taskMap[q.id]?.saved_for_later || false

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,17 +11,21 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Username and password are required' }, { status: 400 });
     }
 
-    // Query user from database
-    const res = await query(
-      'SELECT id, username, password, role, approved, can_view, can_edit, can_delete FROM users WHERE username = $1',
-      [username.trim()]
-    );
+    // Query user from Supabase
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, username, password, role, approved, can_view, can_edit, can_delete')
+      .eq('username', username.trim())
+      .maybeSingle();
 
-    if (res.rows.length === 0) {
-      return NextResponse.json({ message: 'Invalid username or password' }, { status: 401 });
+    if (error) {
+      console.error('Supabase query error during login:', error);
+      throw error;
     }
 
-    const user = res.rows[0];
+    if (!user) {
+      return NextResponse.json({ message: 'Invalid username or password' }, { status: 401 });
+    }
 
     // Check plaintext password (dont encrypt the pass as requested)
     if (user.password !== password) {

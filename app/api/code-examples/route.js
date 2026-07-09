@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view, can_edit, can_delete FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view, can_edit, can_delete')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function GET(req) {
@@ -28,23 +33,32 @@ export async function GET(req) {
       return NextResponse.json({ message: 'topic_id is required.' }, { status: 400 });
     }
 
-    const res = await query('SELECT * FROM code_examples WHERE topic_id = $1 ORDER BY id ASC', [topicId]);
+    const { data: examples, error } = await supabase
+      .from('code_examples')
+      .select('*')
+      .eq('topic_id', topicId)
+      .order('id', { ascending: true });
+
+    if (error) throw error;
 
     // Fetch user completion status for these code examples
-    const tasksRes = await query(
-      "SELECT item_id, status, saved_for_later FROM user_tasks WHERE user_id = $1 AND item_type = 'code_example'",
-      [user.id]
-    );
+    const { data: tasks, error: tasksError } = await supabase
+      .from('user_tasks')
+      .select('item_id, status, saved_for_later')
+      .eq('user_id', user.id)
+      .eq('item_type', 'code_example');
+
+    if (tasksError) throw tasksError;
 
     const taskMap = {};
-    tasksRes.rows.forEach(t => {
+    tasks.forEach(t => {
       taskMap[t.item_id] = {
         status: t.status,
         saved_for_later: t.saved_for_later
       };
     });
 
-    const enrichedExamples = res.rows.map(e => ({
+    const enrichedExamples = (examples || []).map(e => ({
       ...e,
       status: taskMap[e.id]?.status || 'Pending',
       saved_for_later: taskMap[e.id]?.saved_for_later || false
@@ -73,20 +87,33 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Code block cannot be empty.' }, { status: 400 });
     }
 
-    // Verify topic exists
-    const topicCheck = await query('SELECT id FROM topics WHERE id = $1', [topic_id]);
-    if (topicCheck.rows.length === 0) {
+    // Verify topic exists (todos table)
+    const { data: topic, error: topicError } = await supabase
+      .from('todos')
+      .select('id')
+      .eq('id', topic_id)
+      .maybeSingle();
+
+    if (topicError || !topic) {
       return NextResponse.json({ message: 'Topic not found.' }, { status: 404 });
     }
 
-    const insertRes = await query(
-      `INSERT INTO code_examples (topic_id, title, language, code, explanation, notes)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [topic_id, title || '', language || 'Java', code, explanation || '', notes || '']
-    );
+    const { data: newExample, error: insertError } = await supabase
+      .from('code_examples')
+      .insert({
+        topic_id: topic_id,
+        title: title || '',
+        language: language || 'Java',
+        code: code,
+        explanation: explanation || '',
+        notes: notes || ''
+      })
+      .select()
+      .single();
 
-    return NextResponse.json(insertRes.rows[0], { status: 201 });
+    if (insertError) throw insertError;
+
+    return NextResponse.json(newExample, { status: 201 });
   } catch (error) {
     console.error('POST code example error:', error);
     return NextResponse.json({ message: 'Failed to create code example.' }, { status: 500 });

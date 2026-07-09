@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view, can_edit, can_delete FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view, can_edit, can_delete')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function GET(req, { params }) {
@@ -22,13 +27,17 @@ export async function GET(req, { params }) {
     }
 
     const { id } = params;
-    const res = await query('SELECT * FROM questions WHERE id = $1', [id]);
+    const { data: question, error } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
 
-    if (res.rows.length === 0) {
+    if (error || !question) {
       return NextResponse.json({ message: 'Question not found.' }, { status: 404 });
     }
 
-    return NextResponse.json(res.rows[0]);
+    return NextResponse.json(question);
   } catch (error) {
     console.error('GET question detail error:', error);
     return NextResponse.json({ message: 'Failed to retrieve question details.' }, { status: 500 });
@@ -43,13 +52,17 @@ export async function PUT(req, { params }) {
     }
 
     const { id } = params;
-    const { title, description, difficulty, tags, answer, code, explanation } = await req.json();
+    const { title, description, difficulty, tags, answer, code, explanation, notes } = await req.json();
 
-    const checkRes = await query('SELECT * FROM questions WHERE id = $1', [id]);
-    if (checkRes.rows.length === 0) {
+    const { data: question, error: fetchError } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !question) {
       return NextResponse.json({ message: 'Question not found.' }, { status: 404 });
     }
-    const question = checkRes.rows[0];
 
     const newTitle = title !== undefined ? title.trim() : question.title;
     const newDescription = description !== undefined ? description : question.description;
@@ -58,20 +71,31 @@ export async function PUT(req, { params }) {
     const newAnswer = answer !== undefined ? answer : question.answer;
     const newCode = code !== undefined ? code : question.code;
     const newExplanation = explanation !== undefined ? explanation : question.explanation;
+    const newNotes = notes !== undefined ? notes : question.notes;
 
     if (newTitle === '') {
       return NextResponse.json({ message: 'Title cannot be empty.' }, { status: 400 });
     }
 
-    const updateRes = await query(
-      `UPDATE questions 
-       SET title = $1, description = $2, difficulty = $3, tags = $4, answer = $5, code = $6, explanation = $7
-       WHERE id = $8
-       RETURNING *`,
-      [newTitle, newDescription, newDifficulty, newTags, newAnswer, newCode, newExplanation, id]
-    );
+    const { data: updatedQuestion, error: updateError } = await supabase
+      .from('questions')
+      .update({
+        title: newTitle,
+        description: newDescription,
+        difficulty: newDifficulty,
+        tags: newTags,
+        answer: newAnswer,
+        code: newCode,
+        explanation: newExplanation,
+        notes: newNotes
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-    return NextResponse.json(updateRes.rows[0]);
+    if (updateError) throw updateError;
+
+    return NextResponse.json(updatedQuestion);
   } catch (error) {
     console.error('PUT question error:', error);
     return NextResponse.json({ message: 'Failed to update question.' }, { status: 500 });
@@ -86,9 +110,14 @@ export async function DELETE(req, { params }) {
     }
 
     const { id } = params;
-    const deleteRes = await query('DELETE FROM questions WHERE id = $1 RETURNING id', [id]);
+    const { data: deletedQuestion, error } = await supabase
+      .from('questions')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
 
-    if (deleteRes.rows.length === 0) {
+    if (error || !deletedQuestion) {
       return NextResponse.json({ message: 'Question not found.' }, { status: 404 });
     }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function GET(req) {
@@ -22,33 +27,43 @@ export async function GET(req) {
     }
 
     // Fetch user tasks
-    const tasksRes = await query('SELECT * FROM user_tasks WHERE user_id = $1 ORDER BY id DESC', [user.id]);
-    const userTasks = tasksRes.rows;
+    const { data: userTasks, error: tasksError } = await supabase
+      .from('user_tasks')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('id', { ascending: false });
 
-    if (userTasks.length === 0) {
+    if (tasksError) throw tasksError;
+
+    if (!userTasks || userTasks.length === 0) {
       return NextResponse.json([]);
     }
 
-    // Resolve detailed information in parallel for topics, questions, code examples, notes
+    // Resolve detailed information in parallel (todos represents topics)
     const [topicsRes, questionsRes, examplesRes, notesRes] = await Promise.all([
-      query('SELECT id, title, category, difficulty, estimated_time FROM topics'),
-      query('SELECT id, title, topic_id, difficulty FROM questions'),
-      query('SELECT id, title, topic_id, language FROM code_examples'),
-      query('SELECT id, title, topic_id FROM notes')
+      supabase.from('todos').select('id, title, category, difficulty, estimated_time'),
+      supabase.from('questions').select('id, title, todo_id, difficulty'),
+      supabase.from('code_examples').select('id, title, topic_id, language'),
+      supabase.from('notes').select('id, title, topic_id')
     ]);
 
+    if (topicsRes.error) throw topicsRes.error;
+    if (questionsRes.error) throw questionsRes.error;
+    if (examplesRes.error) throw examplesRes.error;
+    if (notesRes.error) throw notesRes.error;
+
     const topicsMap = {};
-    topicsRes.rows.forEach(t => { topicsMap[t.id] = t; });
+    topicsRes.data.forEach(t => { topicsMap[t.id] = t; });
     const questionsMap = {};
-    questionsRes.rows.forEach(q => { questionsMap[q.id] = q; });
+    questionsRes.data.forEach(q => { questionsMap[q.id] = q; });
     const examplesMap = {};
-    examplesRes.rows.forEach(e => { examplesMap[e.id] = e; });
+    examplesRes.data.forEach(e => { examplesMap[e.id] = e; });
     const notesMap = {};
-    notesRes.rows.forEach(n => { notesMap[n.id] = n; });
+    notesRes.data.forEach(n => { notesMap[n.id] = n; });
 
     const enrichedTasks = userTasks.map(task => {
       let itemDetails = null;
-      if (task.item_type === 'topic') {
+      if (task.item_type === 'topic' || task.item_type === 'todo') {
         itemDetails = topicsMap[task.item_id];
       } else if (task.item_type === 'question') {
         itemDetails = questionsMap[task.item_id];
@@ -58,7 +73,6 @@ export async function GET(req) {
         itemDetails = notesMap[task.item_id];
       }
 
-      // Format added_date to string
       const addedDateStr = task.added_date ? new Date(task.added_date).toISOString().split('T')[0] : '';
 
       return {
@@ -88,25 +102,22 @@ export async function POST(req) {
       return NextResponse.json({ message: 'itemType and itemId are required.' }, { status: 400 });
     }
 
-    // Insert task or update status / saved state if it already exists
-    const upsertRes = await query(
-      `INSERT INTO user_tasks (user_id, item_type, item_id, status, saved_for_later, added_date)
-       VALUES ($1, $2, $3, $4, $5, CURRENT_DATE)
-       ON CONFLICT (user_id, item_type, item_id)
-       DO UPDATE SET 
-         status = COALESCE($4, user_tasks.status),
-         saved_for_later = COALESCE($5, user_tasks.saved_for_later)
-       RETURNING *`,
-      [
-        user.id,
-        itemType,
-        itemId,
-        status || 'Pending',
-        savedForLater !== undefined ? savedForLater : false
-      ]
-    );
+    // Insert task or update status / saved state if it already exists (upsert)
+    const { data: task, error: upsertError } = await supabase
+      .from('user_tasks')
+      .upsert({
+        user_id: user.id,
+        item_type: itemType,
+        item_id: itemId,
+        status: status || 'Pending',
+        saved_for_later: savedForLater !== undefined ? savedForLater : false
+      }, { onConflict: 'user_id,item_type,item_id' })
+      .select()
+      .single();
 
-    return NextResponse.json(upsertRes.rows[0]);
+    if (upsertError) throw upsertError;
+
+    return NextResponse.json(task);
   } catch (error) {
     console.error('POST user task error:', error);
     return NextResponse.json({ message: 'Failed to save task.' }, { status: 500 });

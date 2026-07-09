@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view, can_edit, can_delete FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view, can_edit, can_delete')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function GET(req, { params }) {
@@ -23,47 +28,52 @@ export async function GET(req, { params }) {
 
     const { id } = params;
 
-    // Fetch topic
-    const topicRes = await query('SELECT * FROM topics WHERE id = $1', [id]);
-    if (topicRes.rows.length === 0) {
+    // Fetch topic (todos table)
+    const { data: topic, error: topicError } = await supabase
+      .from('todos')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (topicError || !topic) {
       return NextResponse.json({ message: 'Topic not found.' }, { status: 404 });
     }
-    const topic = topicRes.rows[0];
 
     // Fetch associated questions, code examples, and notes
-    const questionsRes = await query('SELECT * FROM questions WHERE topic_id = $1 ORDER BY id ASC', [id]);
-    const examplesRes = await query('SELECT * FROM code_examples WHERE topic_id = $1 ORDER BY id ASC', [id]);
-    const notesRes = await query('SELECT * FROM notes WHERE topic_id = $1 ORDER BY id ASC', [id]);
+    const [questionsRes, examplesRes, notesRes, tasksRes] = await Promise.all([
+      supabase.from('questions').select('*').eq('todo_id', id).order('id', { ascending: true }),
+      supabase.from('code_examples').select('*').eq('topic_id', id).order('id', { ascending: true }),
+      supabase.from('notes').select('*').eq('topic_id', id).order('id', { ascending: true }),
+      supabase.from('user_tasks').select('item_type, item_id, status, saved_for_later').eq('user_id', user.id)
+    ]);
 
-    // Fetch user completion tasks for these items
-    const tasksRes = await query(
-      "SELECT item_type, item_id, status, saved_for_later FROM user_tasks WHERE user_id = $1",
-      [user.id]
-    );
-    const userTasks = tasksRes.rows;
-    
+    if (questionsRes.error) throw questionsRes.error;
+    if (examplesRes.error) throw examplesRes.error;
+    if (notesRes.error) throw notesRes.error;
+    if (tasksRes.error) throw tasksRes.error;
+
     // Create maps for quick lookup of item status/saved state
     const taskMap = {};
-    userTasks.forEach(t => {
+    tasksRes.data.forEach(t => {
       taskMap[`${t.item_type}_${t.item_id}`] = {
         status: t.status,
         saved_for_later: t.saved_for_later
       };
     });
 
-    const questionsWithStatus = questionsRes.rows.map(q => ({
+    const questionsWithStatus = questionsRes.data.map(q => ({
       ...q,
       status: taskMap[`question_${q.id}`]?.status || 'Pending',
       saved_for_later: taskMap[`question_${q.id}`]?.saved_for_later || false
     }));
 
-    const examplesWithStatus = examplesRes.rows.map(e => ({
+    const examplesWithStatus = examplesRes.data.map(e => ({
       ...e,
       status: taskMap[`code_example_${e.id}`]?.status || 'Pending',
       saved_for_later: taskMap[`code_example_${e.id}`]?.saved_for_later || false
     }));
 
-    const notesWithStatus = notesRes.rows.map(n => ({
+    const notesWithStatus = notesRes.data.map(n => ({
       ...n,
       status: taskMap[`note_${n.id}`]?.status || 'Pending',
       saved_for_later: taskMap[`note_${n.id}`]?.saved_for_later || false
@@ -96,11 +106,15 @@ export async function PUT(req, { params }) {
     const { id } = params;
     const { title, category, difficulty, estimatedTime } = await req.json();
 
-    const topicCheck = await query('SELECT * FROM topics WHERE id = $1', [id]);
-    if (topicCheck.rows.length === 0) {
+    const { data: topic, error: fetchError } = await supabase
+      .from('todos')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !topic) {
       return NextResponse.json({ message: 'Topic not found.' }, { status: 404 });
     }
-    const topic = topicCheck.rows[0];
 
     const newTitle = title !== undefined ? title.trim() : topic.title;
     const newCategory = category !== undefined ? category : topic.category;
@@ -111,15 +125,21 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ message: 'Title cannot be empty.' }, { status: 400 });
     }
 
-    const updateRes = await query(
-      `UPDATE topics 
-       SET title = $1, category = $2, difficulty = $3, estimated_time = $4
-       WHERE id = $5
-       RETURNING *`,
-      [newTitle, newCategory, newDifficulty, newEstimatedTime, id]
-    );
+    const { data: updatedTopic, error: updateError } = await supabase
+      .from('todos')
+      .update({
+        title: newTitle,
+        category: newCategory,
+        difficulty: newDifficulty,
+        estimated_time: newEstimatedTime
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-    return NextResponse.json(updateRes.rows[0]);
+    if (updateError) throw updateError;
+
+    return NextResponse.json(updatedTopic);
   } catch (error) {
     console.error('PUT topic error:', error);
     return NextResponse.json({ message: 'Failed to update topic.' }, { status: 500 });
@@ -134,9 +154,14 @@ export async function DELETE(req, { params }) {
     }
 
     const { id } = params;
-    const deleteRes = await query('DELETE FROM topics WHERE id = $1 RETURNING id', [id]);
+    const { data: deletedTopic, error } = await supabase
+      .from('todos')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
 
-    if (deleteRes.rows.length === 0) {
+    if (error || !deletedTopic) {
       return NextResponse.json({ message: 'Topic not found.' }, { status: 404 });
     }
 

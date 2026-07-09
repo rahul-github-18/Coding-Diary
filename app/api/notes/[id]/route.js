@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,11 +7,16 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view, can_edit, can_delete FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view, can_edit, can_delete')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 export async function PUT(req, { params }) {
@@ -24,11 +29,15 @@ export async function PUT(req, { params }) {
     const { id } = params;
     const { title, content } = await req.json();
 
-    const checkRes = await query('SELECT * FROM notes WHERE id = $1', [id]);
-    if (checkRes.rows.length === 0) {
+    const { data: note, error: fetchError } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !note) {
       return NextResponse.json({ message: 'Note not found.' }, { status: 404 });
     }
-    const note = checkRes.rows[0];
 
     const newTitle = title !== undefined ? title.trim() : note.title;
     const newContent = content !== undefined ? content : note.content;
@@ -40,15 +49,19 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ message: 'Content cannot be empty.' }, { status: 400 });
     }
 
-    const updateRes = await query(
-      `UPDATE notes 
-       SET title = $1, content = $2
-       WHERE id = $3
-       RETURNING *`,
-      [newTitle, newContent, id]
-    );
+    const { data: updatedNote, error: updateError } = await supabase
+      .from('notes')
+      .update({
+        title: newTitle,
+        content: newContent
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-    return NextResponse.json(updateRes.rows[0]);
+    if (updateError) throw updateError;
+
+    return NextResponse.json(updatedNote);
   } catch (error) {
     console.error('PUT note error:', error);
     return NextResponse.json({ message: 'Failed to update note.' }, { status: 500 });
@@ -63,9 +76,14 @@ export async function DELETE(req, { params }) {
     }
 
     const { id } = params;
-    const deleteRes = await query('DELETE FROM notes WHERE id = $1 RETURNING id', [id]);
+    const { data: deletedNote, error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
 
-    if (deleteRes.rows.length === 0) {
+    if (error || !deletedNote) {
       return NextResponse.json({ message: 'Note not found.' }, { status: 404 });
     }
 

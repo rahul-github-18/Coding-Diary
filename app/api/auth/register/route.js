@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,16 +16,32 @@ export async function POST(req) {
     }
 
     // Check if user already exists
-    const checkRes = await query('SELECT id FROM users WHERE username = $1', [username.trim()]);
-    if (checkRes.rows.length > 0) {
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', username.trim())
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    if (existingUser) {
       return NextResponse.json({ message: 'Username is already taken' }, { status: 400 });
     }
 
     // Insert user (not encrypted as requested)
-    await query(
-      'INSERT INTO users (username, password, role, approved, can_view, can_edit, can_delete) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [username.trim(), password, 'user', false, true, false, false]
-    );
+    const { error: insertError } = await supabase
+      .from('users')
+      .insert({
+        username: username.trim(),
+        password: password,
+        role: 'user',
+        approved: false,
+        can_view: true,
+        can_edit: false,
+        can_delete: false
+      });
+
+    if (insertError) throw insertError;
 
     return NextResponse.json(
       { message: 'Enrollment successful! Your account is pending admin approval.' },

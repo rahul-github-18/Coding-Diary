@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,17 +7,27 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const userCheck = await query('SELECT id, approved, role, can_view FROM users WHERE id = $1', [reqUserId]);
-  if (userCheck.rows.length === 0 || !userCheck.rows[0].approved) {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, approved, role, can_view')
+    .eq('id', reqUserId)
+    .maybeSingle();
+
+  if (error || !user || !user.approved) {
     return null;
   }
-  return userCheck.rows[0];
+  return user;
 }
 
 async function cleanExpiredCodes() {
   try {
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-    await query("DELETE FROM shared_codes WHERE created_at < $1", [fifteenMinutesAgo]);
+    const { error } = await supabase
+      .from('shared_codes')
+      .delete()
+      .lt('created_at', fifteenMinutesAgo.toISOString());
+
+    if (error) throw error;
     console.log('[cleanExpiredCodes] Finished background cleanup');
   } catch (error) {
     console.error('Error cleaning expired shared codes:', error);
@@ -34,9 +44,14 @@ export async function GET(req) {
     // Clean up expired codes in background
     cleanExpiredCodes();
 
-    const res = await query('SELECT * FROM shared_codes ORDER BY created_at DESC');
+    const { data: sharedCodes, error } = await supabase
+      .from('shared_codes')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    const formattedCodes = res.rows.map(item => {
+    if (error) throw error;
+
+    const formattedCodes = (sharedCodes || []).map(item => {
       const d = new Date(item.created_at);
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -76,12 +91,16 @@ export async function POST(req) {
     // Clean up expired codes in background
     cleanExpiredCodes();
 
-    const insertRes = await query(
-      'INSERT INTO shared_codes (title, code) VALUES ($1, $2) RETURNING id, title, code, created_at',
-      [title.trim(), code]
-    );
+    const { data: newSnippet, error: insertError } = await supabase
+      .from('shared_codes')
+      .insert({
+        title: title.trim(),
+        code: code
+      })
+      .select('id, title, code, created_at')
+      .single();
 
-    const newSnippet = insertRes.rows[0];
+    if (insertError) throw insertError;
 
     const d = new Date(newSnippet.created_at);
     const yyyy = d.getFullYear();
