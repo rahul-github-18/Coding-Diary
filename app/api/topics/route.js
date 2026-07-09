@@ -151,7 +151,7 @@ export async function POST(req) {
   console.time('API: POST /api/topics');
   try {
     const user = await checkUser(req);
-    if (!user || !user.can_edit) {
+    if (!user || (user.role !== 'admin' && !user.can_edit)) {
       console.timeEnd('API: POST /api/topics');
       return NextResponse.json({ message: 'Access Denied. You do not have permission to edit content.' }, { status: 403 });
     }

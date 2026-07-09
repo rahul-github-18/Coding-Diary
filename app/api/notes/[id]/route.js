@@ -26,7 +26,7 @@ export async function PUT(req, { params }) {
   console.time(timerLabel);
   try {
     const user = await checkUser(req);
-    if (!user || !user.can_edit) {
+    if (!user || (user.role !== 'admin' && !user.can_edit)) {
       console.timeEnd(timerLabel);
       return NextResponse.json({ message: 'Access Denied. You do not have permission to edit content.' }, { status: 403 });
     }
@@ -90,7 +90,7 @@ export async function DELETE(req, { params }) {
   console.time(timerLabel);
   try {
     const user = await checkUser(req);
-    if (!user || !user.can_delete) {
+    if (!user || (user.role !== 'admin' && !user.can_delete)) {
       console.timeEnd(timerLabel);
       return NextResponse.json({ message: 'Access Denied. You do not have permission to delete content.' }, { status: 403 });
     }

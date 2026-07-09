@@ -10,7 +10,7 @@ async function checkUser(req) {
 
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, approved, role, can_view')
+    .select('id, approved, role, can_view, can_edit')
     .eq('id', reqUserId)
     .maybeSingle();
 
@@ -85,7 +85,7 @@ export async function POST(req) {
   console.time('API: POST /api/code-examples');
   try {
     const user = await checkUser(req);
-    if (!user || !user.can_edit) {
+    if (!user || (user.role !== 'admin' && !user.can_edit)) {
       console.timeEnd('API: POST /api/code-examples');
       return NextResponse.json({ message: 'Access Denied. You do not have permission to edit content.' }, { status: 403 });
     }
