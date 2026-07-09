@@ -5,7 +5,6 @@ import { useRouter, useParams } from 'next/navigation';
 import Editor from '@monaco-editor/react';
 import Layout from '@/components/Layout';
 import { todoService, questionService } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
 
 function TodoDetailContent({ searchQuery }) {
   const { id: todoId } = useParams();
@@ -30,26 +29,13 @@ function TodoDetailContent({ searchQuery }) {
   const [modalError, setModalError] = useState('');
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace('/login');
-      } else {
-        setAuthorized(true);
-        fetchData();
-      }
-    };
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        router.replace('/login');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (!isLoggedIn) {
+      router.replace('/login');
+    } else {
+      setAuthorized(true);
+      fetchData();
+    }
   }, [todoId, router]);
 
   const fetchData = async () => {

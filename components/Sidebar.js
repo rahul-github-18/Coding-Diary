@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
 const Sidebar = ({ onExportPDF, isDarkMode, toggleTheme }) => {
   const router = useRouter();
@@ -10,8 +9,8 @@ const Sidebar = ({ onExportPDF, isDarkMode, toggleTheme }) => {
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
     router.push('/login');
   };
 

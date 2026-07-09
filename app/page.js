@@ -4,7 +4,6 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { todoService } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
 
 function DashboardContent({ searchQuery }) {
   const [todos, setTodos] = useState([]);
@@ -20,26 +19,13 @@ function DashboardContent({ searchQuery }) {
   const filter = searchParams.get('filter');
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace('/login');
-      } else {
-        setAuthorized(true);
-        fetchTodos();
-      }
-    };
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        router.replace('/login');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (!isLoggedIn) {
+      router.replace('/login');
+    } else {
+      setAuthorized(true);
+      fetchTodos();
+    }
   }, [router]);
 
   const fetchTodos = async () => {

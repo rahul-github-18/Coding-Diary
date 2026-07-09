@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Editor from '@monaco-editor/react';
 import Layout from '@/components/Layout';
 import { shareService } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
 
 function ShareCodeContent() {
   const [sharedCodes, setSharedCodes] = useState([]);
@@ -20,32 +19,20 @@ function ShareCodeContent() {
   const router = useRouter();
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace('/login');
-      } else {
-        setAuthorized(true);
-        fetchSharedCodes();
-      }
-    };
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        router.replace('/login');
-      }
-    });
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (!isLoggedIn) {
+      router.replace('/login');
+    } else {
+      setAuthorized(true);
+      fetchSharedCodes();
+    }
 
     // Set up timer interval to tick every second to update countdowns
     const timer = setInterval(() => {
       setCurrentTime(Date.now());
     }, 1000);
 
-    return () => {
-      subscription.unsubscribe();
-      clearInterval(timer);
-    };
+    return () => clearInterval(timer);
   }, [router]);
 
   const fetchSharedCodes = async () => {
