@@ -23,6 +23,7 @@ async function checkAdmin(req) {
 
 export async function PUT(req, { params }) {
   const { id } = params;
+  const userId = parseInt(id, 10);
   const timerLabel = `API: PUT /api/admin/users/${id}`;
   console.time(timerLabel);
   try {
@@ -39,7 +40,7 @@ export async function PUT(req, { params }) {
     const { data: user, error: fetchError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', id)
+      .eq('id', userId)
       .maybeSingle();
     console.timeEnd('Supabase: Fetch User detail (PUT)');
 
@@ -60,7 +61,7 @@ export async function PUT(req, { params }) {
     const { data: updatedUser, error: updateError } = await supabase
       .from('users')
       .update(updateData)
-      .eq('id', id)
+      .eq('id', userId)
       .select('id, username, role, approved, can_view, can_edit, can_delete')
       .single();
     console.timeEnd('Supabase: Update User detail');

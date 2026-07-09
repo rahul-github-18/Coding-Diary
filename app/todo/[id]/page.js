@@ -186,7 +186,8 @@ function TodoDetailContent({ searchQuery }) {
     try {
       // Fetching topic detail via api
       const res = await fetch(`/api/topics/${topicId}`, {
-        headers: { 'x-user-id': localStorage.getItem('userId') }
+        headers: { 'x-user-id': localStorage.getItem('userId') },
+        cache: 'no-store'
       });
       const data = await res.json();
       
