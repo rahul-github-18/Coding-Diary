@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Editor from '@monaco-editor/react';
 import Layout from '@/components/Layout';
 import { questionService } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 
 function QuestionDetailContent() {
   const { id: questionId } = useParams();
@@ -23,13 +24,26 @@ function QuestionDetailContent() {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (!isLoggedIn) {
-      router.replace('/login');
-    } else {
-      setAuthorized(true);
-      fetchQuestionDetails();
-    }
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace('/login');
+      } else {
+        setAuthorized(true);
+        fetchQuestionDetails();
+      }
+    };
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        router.replace('/login');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [questionId, router]);
 
   const fetchQuestionDetails = async () => {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import { generateNotesPDF } from '@/lib/pdfExport';
+import { supabase } from '@/lib/supabase';
 
 const Layout = ({ children, searchQuery, setSearchQuery }) => {
   const router = useRouter();
@@ -69,8 +70,8 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
     setPdfDoc(null);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     router.push('/login');
   };
 
