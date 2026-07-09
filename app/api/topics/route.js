@@ -139,7 +139,11 @@ export async function GET(req) {
     });
 
     console.timeEnd('API: GET /api/topics');
-    return NextResponse.json(enhancedTopics);
+    return NextResponse.json(enhancedTopics, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0, must-revalidate'
+      }
+    });
   } catch (error) {
     console.error('GET topics error:', error);
     console.timeEnd('API: GET /api/topics');

@@ -41,7 +41,11 @@ export async function GET(req) {
     if (error) throw error;
 
     console.timeEnd('API: GET /api/admin/users');
-    return NextResponse.json(users);
+    return NextResponse.json(users, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0, must-revalidate'
+      }
+    });
   } catch (error) {
     console.error('Admin GET users error:', error);
     console.timeEnd('API: GET /api/admin/users');

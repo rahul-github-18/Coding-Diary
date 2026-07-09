@@ -79,7 +79,11 @@ export async function GET(req) {
     });
 
     console.timeEnd('API: GET /api/user/tasks');
-    return NextResponse.json(enrichedTasks);
+    return NextResponse.json(enrichedTasks, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0, must-revalidate'
+      }
+    });
   } catch (error) {
     console.error('GET user tasks error:', error);
     console.timeEnd('API: GET /api/user/tasks');
