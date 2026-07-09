@@ -37,11 +37,8 @@ function DashboardContent({ searchQuery }) {
   const [topics, setTopics] = useState([]);
 
   // Forms / Modals States
-  const [activeForm, setActiveForm] = useState(null); // 'topic', 'question', 'code', 'note'
+  const [activeForm, setActiveForm] = useState(null); // 'topic'
   const [newTopic, setNewTopic] = useState({ title: '', category: 'General', difficulty: 'Beginner', estimatedTime: '1 hour' });
-  const [newQuestion, setNewQuestion] = useState({ topicId: '', title: '', description: '', difficulty: 'Beginner', tags: '', answer: '', code: '', explanation: '' });
-  const [newExample, setNewExample] = useState({ topicId: '', title: '', language: 'Java', code: '', explanation: '', notes: '' });
-  const [newNote, setNewNote] = useState({ topicId: '', title: '', content: '' });
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -107,7 +104,7 @@ function DashboardContent({ searchQuery }) {
       }
     } catch (err) {
       console.error(err);
-      setError('Could not connect to database. Please make sure the local PostgreSQL database is running.');
+      setError('Could not connect to database.');
     } finally {
       setLoading(false);
     }
@@ -120,7 +117,7 @@ function DashboardContent({ searchQuery }) {
     setError('');
     setSuccess('');
     try {
-      await todoService.createTopic || todoService.createTodo(
+      await todoService.createTodo(
         newTopic.title,
         newTopic.category,
         newTopic.difficulty,
@@ -132,74 +129,6 @@ function DashboardContent({ searchQuery }) {
       loadDashboardData(user);
     } catch (err) {
       setError(err.message || 'Failed to create topic.');
-    }
-  };
-
-  const handleCreateQuestion = async (e) => {
-    e.preventDefault();
-    if (!newQuestion.topicId || !newQuestion.title.trim()) return;
-    setError('');
-    setSuccess('');
-    try {
-      const { questionService } = await import('@/lib/api');
-      await questionService.createQuestion(newQuestion.topicId, {
-        title: newQuestion.title,
-        description: newQuestion.description,
-        difficulty: newQuestion.difficulty,
-        tags: newQuestion.tags,
-        answer: newQuestion.answer,
-        code: newQuestion.code,
-        explanation: newQuestion.explanation
-      });
-      setSuccess('Question added successfully!');
-      setNewQuestion({ topicId: '', title: '', description: '', difficulty: 'Beginner', tags: '', answer: '', code: '', explanation: '' });
-      setActiveForm(null);
-      loadDashboardData(user);
-    } catch (err) {
-      setError(err.message || 'Failed to create question.');
-    }
-  };
-
-  const handleCreateExample = async (e) => {
-    e.preventDefault();
-    if (!newExample.topicId || !newExample.code.trim()) return;
-    setError('');
-    setSuccess('');
-    try {
-      const { codeService } = await import('@/lib/api');
-      await codeService.createExample(newExample.topicId, {
-        title: newExample.title,
-        language: newExample.language,
-        code: newExample.code,
-        explanation: newExample.explanation,
-        notes: newExample.notes
-      });
-      setSuccess('Code example added successfully!');
-      setNewExample({ topicId: '', title: '', language: 'Java', code: '', explanation: '', notes: '' });
-      setActiveForm(null);
-      loadDashboardData(user);
-    } catch (err) {
-      setError(err.message || 'Failed to create code example.');
-    }
-  };
-
-  const handleCreateNote = async (e) => {
-    e.preventDefault();
-    if (!newNote.topicId || !newNote.title.trim() || !newNote.content.trim()) return;
-    setError('');
-    setSuccess('');
-    try {
-      const { noteService } = await import('@/lib/api');
-      await noteService.createNote(newNote.topicId, {
-        title: newNote.title,
-        content: newNote.content
-      });
-      setSuccess('Note added successfully!');
-      setNewNote({ topicId: '', title: '', content: '' });
-      setActiveForm(null);
-      loadDashboardData(user);
-    } catch (err) {
-      setError(err.message || 'Failed to create note.');
     }
   };
 
@@ -301,9 +230,16 @@ function DashboardContent({ searchQuery }) {
               Admin Management Console
             </h2>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
-              Manage curriculum topics, review enrollments, and configure security permissions.
+              Manage curriculum topics and review enrollments.
             </p>
           </div>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => router.push('/admin/users')}
+            style={{ padding: '10px 20px', fontWeight: '600' }}
+          >
+            Manage Users & Permissions &rarr;
+          </button>
         </div>
 
         {error && <div className="login-error">{error}</div>}
@@ -312,11 +248,11 @@ function DashboardContent({ searchQuery }) {
         {/* Stats Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
           {[
-            { title: 'Total Topics', count: adminStats.topicsCount, color: 'from-blue-500 to-indigo-500' },
-            { title: 'Total Questions', count: adminStats.questionsCount, color: 'from-sky-400 to-blue-500' },
-            { title: 'Total Notes', count: adminStats.notesCount, color: 'from-violet-500 to-purple-500' },
-            { title: 'Code Examples', count: adminStats.examplesCount, color: 'from-emerald-500 to-teal-500' },
-            { title: 'Total Users', count: adminStats.usersCount, color: 'from-pink-500 to-rose-500' }
+            { title: 'Total Topics', count: adminStats.topicsCount },
+            { title: 'Total Questions', count: adminStats.questionsCount },
+            { title: 'Total Notes', count: adminStats.notesCount },
+            { title: 'Code Examples', count: adminStats.examplesCount },
+            { title: 'Total Users', count: adminStats.usersCount }
           ].map((card, idx) => (
             <div key={idx} className="card" style={{ minHeight: '120px', padding: '16px', position: 'relative', overflow: 'hidden' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
@@ -331,28 +267,19 @@ function DashboardContent({ searchQuery }) {
 
         {/* Quick Actions Panel */}
         <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-heading)' }}>
-            Quick Actions
-          </h3>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0, color: 'var(--text-heading)' }}>
+              Curriculum Manager
+            </h3>
             <button className="btn btn-primary" onClick={() => setActiveForm(activeForm === 'topic' ? null : 'topic')}>
-              + Add Topic
-            </button>
-            <button className="btn btn-primary" onClick={() => setActiveForm(activeForm === 'question' ? null : 'question')}>
-              + Add Question
-            </button>
-            <button className="btn btn-primary" onClick={() => setActiveForm(activeForm === 'code' ? null : 'code')}>
-              + Add Code
-            </button>
-            <button className="btn btn-primary" onClick={() => setActiveForm(activeForm === 'note' ? null : 'note')}>
-              + Add Note
+              {activeForm === 'topic' ? 'Cancel' : '+ Add New Topic'}
             </button>
           </div>
 
           {/* Quick Action Forms */}
           {activeForm === 'topic' && (
             <form onSubmit={handleCreateTopic} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '500px', padding: '16px', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
-              <h4 style={{ fontWeight: '600', color: 'var(--text-heading)' }}>Create New Topic</h4>
+              <h4 style={{ fontWeight: '600', color: 'var(--text-heading)', margin: 0 }}>Create New Topic</h4>
               <input type="text" placeholder="Topic Title (e.g. React Hooks)" className="form-input" value={newTopic.title} onChange={e => setNewTopic({ ...newTopic, title: e.target.value })} required />
               <input type="text" placeholder="Category (e.g. React)" className="form-input" value={newTopic.category} onChange={e => setNewTopic({ ...newTopic, category: e.target.value })} />
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -366,146 +293,6 @@ function DashboardContent({ searchQuery }) {
               <button type="submit" className="btn btn-success">Save Topic</button>
             </form>
           )}
-
-          {activeForm === 'question' && (
-            <form onSubmit={handleCreateQuestion} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '600px', padding: '16px', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
-              <h4 style={{ fontWeight: '600', color: 'var(--text-heading)' }}>Add Question</h4>
-              <select className="form-input" value={newQuestion.topicId} onChange={e => setNewQuestion({ ...newQuestion, topicId: e.target.value })} required>
-                <option value="">-- Select Topic --</option>
-                {topics.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
-              </select>
-              <input type="text" placeholder="Question Title (e.g. What is useEffect?)" className="form-input" value={newQuestion.title} onChange={e => setNewQuestion({ ...newQuestion, title: e.target.value })} required />
-              <textarea placeholder="Description / Prompt" className="form-input" style={{ height: '80px' }} value={newQuestion.description} onChange={e => setNewQuestion({ ...newQuestion, description: e.target.value })} />
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <select className="form-input" value={newQuestion.difficulty} onChange={e => setNewQuestion({ ...newQuestion, difficulty: e.target.value })}>
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                </select>
-                <input type="text" placeholder="Tags (comma separated)" className="form-input" value={newQuestion.tags} onChange={e => setNewQuestion({ ...newQuestion, tags: e.target.value })} />
-              </div>
-              <textarea placeholder="Answer explanation" className="form-input" style={{ height: '80px' }} value={newQuestion.answer} onChange={e => setNewQuestion({ ...newQuestion, answer: e.target.value })} />
-              <textarea placeholder="Optional initial Java code example" className="form-input" style={{ height: '100px', fontFamily: 'monospace' }} value={newQuestion.code} onChange={e => setNewQuestion({ ...newQuestion, code: e.target.value })} />
-              <textarea placeholder="Explanation" className="form-input" style={{ height: '60px' }} value={newQuestion.explanation} onChange={e => setNewQuestion({ ...newQuestion, explanation: e.target.value })} />
-              <button type="submit" className="btn btn-success">Save Question</button>
-            </form>
-          )}
-
-          {activeForm === 'code' && (
-            <form onSubmit={handleCreateExample} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '600px', padding: '16px', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
-              <h4 style={{ fontWeight: '600', color: 'var(--text-heading)' }}>Add Code Example</h4>
-              <select className="form-input" value={newExample.topicId} onChange={e => setNewExample({ ...newExample, topicId: e.target.value })} required>
-                <option value="">-- Select Topic --</option>
-                {topics.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
-              </select>
-              <input type="text" placeholder="Example Title (e.g. Lambda sorting)" className="form-input" value={newExample.title} onChange={e => setNewExample({ ...newExample, title: e.target.value })} />
-              <input type="text" placeholder="Programming Language (e.g. Java)" className="form-input" value={newExample.language} onChange={e => setNewExample({ ...newExample, language: e.target.value })} />
-              <textarea placeholder="Code block content..." className="form-input" style={{ height: '140px', fontFamily: 'monospace' }} value={newExample.code} onChange={e => setNewExample({ ...newExample, code: e.target.value })} required />
-              <textarea placeholder="Explanation" className="form-input" style={{ height: '60px' }} value={newExample.explanation} onChange={e => setNewExample({ ...newExample, explanation: e.target.value })} />
-              <textarea placeholder="Additional Notes" className="form-input" style={{ height: '60px' }} value={newExample.notes} onChange={e => setNewExample({ ...newExample, notes: e.target.value })} />
-              <button type="submit" className="btn btn-success">Save Code Example</button>
-            </form>
-          )}
-
-          {activeForm === 'note' && (
-            <form onSubmit={handleCreateNote} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '600px', padding: '16px', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
-              <h4 style={{ fontWeight: '600', color: 'var(--text-heading)' }}>Add Note</h4>
-              <select className="form-input" value={newNote.topicId} onChange={e => setNewNote({ ...newNote, topicId: e.target.value })} required>
-                <option value="">-- Select Topic --</option>
-                {topics.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
-              </select>
-              <input type="text" placeholder="Note Title (e.g. Time Complexity overview)" className="form-input" value={newNote.title} onChange={e => setNewNote({ ...newNote, title: e.target.value })} required />
-              <textarea placeholder="Note rich-text/markdown content..." className="form-input" style={{ height: '160px' }} value={newNote.content} onChange={e => setNewNote({ ...newNote, content: e.target.value })} required />
-              <button type="submit" className="btn btn-success">Save Note</button>
-            </form>
-          )}
-        </div>
-
-        {/* User Management & Security Controls */}
-        <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-heading)' }}>
-            User Access & Permissions Control
-          </h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--card-border)', paddingBottom: '12px' }}>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Username</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Role</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Status</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Can View</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Can Edit</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Can Delete</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usersList.map((usr) => (
-                  <tr key={usr.id} style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <td style={{ padding: '12px 8px', fontWeight: '600', color: 'var(--text-heading)' }}>{usr.username}</td>
-                    <td style={{ padding: '12px 8px' }}>
-                      <select 
-                        value={usr.role} 
-                        onChange={(e) => handleRoleChange(usr.id, e.target.value)}
-                        className="form-input" 
-                        style={{ padding: '4px 8px', width: '90px', fontSize: '0.8rem' }}
-                        disabled={usr.username === 'admin'}
-                      >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </td>
-                    <td style={{ padding: '12px 8px' }}>
-                      {usr.approved ? (
-                        <span style={{ fontSize: '0.8rem', padding: '2px 8px', backgroundColor: '#e6f4ea', color: '#137333', borderRadius: '4px', fontWeight: '500' }}>
-                          Approved
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '0.8rem', padding: '2px 8px', backgroundColor: '#fef7e0', color: '#b06000', borderRadius: '4px', fontWeight: '500' }}>
-                          Pending Approval
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={usr.can_view} 
-                        onChange={() => handleTogglePermission(usr.id, 'can_view', usr.can_view)}
-                        disabled={usr.username === 'admin'}
-                      />
-                    </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={usr.can_edit} 
-                        onChange={() => handleTogglePermission(usr.id, 'can_edit', usr.can_edit)}
-                        disabled={usr.username === 'admin'}
-                      />
-                    </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={usr.can_delete} 
-                        onChange={() => handleTogglePermission(usr.id, 'can_delete', usr.can_delete)}
-                        disabled={usr.username === 'admin'}
-                      />
-                    </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>
-                      {!usr.approved && (
-                        <button 
-                          className="btn btn-success" 
-                          style={{ padding: '4px 8px', fontSize: '0.75rem' }} 
-                          onClick={() => handleApproveUser(usr.id)}
-                        >
-                          Approve Enrollment
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
 
         {/* Topics List */}
