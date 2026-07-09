@@ -7,21 +7,8 @@ import { todoService, userService, taskService } from '@/lib/api';
 
 function DashboardContent({ searchQuery }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  // Admin states
-  const [adminStats, setAdminStats] = useState({
-    topicsCount: 0,
-    questionsCount: 0,
-    notesCount: 0,
-    examplesCount: 0,
-    usersCount: 0
-  });
+  const [topics, setTopics] = useState([]);
   const [usersList, setUsersList] = useState([]);
-  
-  // User states
   const [userTasks, setUserTasks] = useState([]);
   const [userStats, setUserStats] = useState({
     streak: 0,
@@ -33,8 +20,17 @@ function DashboardContent({ searchQuery }) {
     recommendations: []
   });
 
-  // Common listing
-  const [topics, setTopics] = useState([]);
+  const [adminStats, setAdminStats] = useState({
+    topicsCount: 0,
+    questionsCount: 0,
+    examplesCount: 0,
+    notesCount: 0,
+    usersCount: 0
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   // Forms / Modals States
   const [activeForm, setActiveForm] = useState(null); // 'topic'
@@ -65,16 +61,40 @@ function DashboardContent({ searchQuery }) {
     setLoading(true);
     setError('');
     try {
+      console.time('API: Parallel Fetch Dashboard Data');
+      
+      // Parallelize all curriculum, stats, user list, and tasks API calls
+      const promises = [
+        todoService.getTodos(),
+        taskService.getUserTasks(),
+        taskService.getUserStats()
+      ];
+
       if (u.role === 'admin') {
-        // Load admin data
-        const [allTopics, allUsers] = await Promise.all([
-          todoService.getTodos(),
-          userService.getUsers()
-        ]);
-        setTopics(allTopics);
+        promises.push(userService.getUsers());
+      } else {
+        promises.push(Promise.resolve(null));
+      }
+
+      const [allTopics, tasks, stats, allUsers] = await Promise.all(promises);
+      console.timeEnd('API: Parallel Fetch Dashboard Data');
+
+      setTopics(allTopics || []);
+      setUserTasks(tasks || []);
+      setUserStats(stats || {
+        streak: 0,
+        completedTasksCount: 0,
+        completedTopicsCount: 0,
+        totalTopicsCount: 0,
+        learningPercentage: 0,
+        weeklyActivity: [],
+        recommendations: []
+      });
+
+      if (u.role === 'admin' && allUsers) {
         setUsersList(allUsers);
 
-        // Compute counts
+        // Compute curriculum counts in-memory
         let qCount = 0;
         let eCount = 0;
         let nCount = 0;
@@ -91,19 +111,9 @@ function DashboardContent({ searchQuery }) {
           notesCount: nCount,
           usersCount: allUsers.length
         });
-      } else {
-        // Load user data
-        const [tasks, stats, allTopics] = await Promise.all([
-          taskService.getUserTasks(),
-          taskService.getUserStats(),
-          todoService.getTodos()
-        ]);
-        setUserTasks(tasks);
-        setUserStats(stats);
-        setTopics(allTopics);
       }
     } catch (err) {
-      console.error(err);
+      console.error('loadDashboardData error:', err);
       setError('Could not connect to database.');
     } finally {
       setLoading(false);
@@ -129,40 +139,6 @@ function DashboardContent({ searchQuery }) {
       loadDashboardData(user);
     } catch (err) {
       setError(err.message || 'Failed to create topic.');
-    }
-  };
-
-  const handleApproveUser = async (uId) => {
-    setError('');
-    try {
-      await userService.approveUser(uId);
-      setSuccess('User enrollment approved!');
-      loadDashboardData(user);
-    } catch (err) {
-      setError(err.message || 'Failed to approve user.');
-    }
-  };
-
-  const handleTogglePermission = async (uId, field, currentValue) => {
-    setError('');
-    try {
-      const updateData = { [field]: !currentValue };
-      await userService.updatePermissions(uId, updateData);
-      setSuccess('User permissions updated successfully.');
-      loadDashboardData(user);
-    } catch (err) {
-      setError(err.message || 'Failed to update permissions.');
-    }
-  };
-
-  const handleRoleChange = async (uId, newRole) => {
-    setError('');
-    try {
-      await userService.updatePermissions(uId, { role: newRole });
-      setSuccess('User role updated.');
-      loadDashboardData(user);
-    } catch (err) {
-      setError(err.message || 'Failed to update role.');
     }
   };
 
@@ -216,12 +192,19 @@ function DashboardContent({ searchQuery }) {
     });
   }, [topics, searchQuery]);
 
+  const filteredUserTasks = useMemo(() => {
+    if (filter === 'today') {
+      return userTasks.filter(t => t.status !== 'Completed');
+    }
+    return userTasks;
+  }, [userTasks, filter]);
+
   if (!user) {
     return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>;
   }
 
-  // RENDER ADMIN DASHBOARD
-  if (user.role === 'admin') {
+  // RENDER ADMIN DASHBOARD (Only show Admin Console if filter is not set)
+  if (user.role === 'admin' && !filter) {
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -335,7 +318,7 @@ function DashboardContent({ searchQuery }) {
     );
   }
 
-  // RENDER USER DASHBOARD
+  // RENDER USER DASHBOARD (Or Admin Task board view when navigating tabs)
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
@@ -343,7 +326,7 @@ function DashboardContent({ searchQuery }) {
       <div className="card" style={{ minHeight: 'auto', padding: '24px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: 'none', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '800', margin: 0, color: '#ffffff' }}>
-            Welcome, {user.username}!
+            {user.role === 'admin' ? 'Admin workspace' : `Welcome, ${user.username}!`}
           </h2>
           <p style={{ fontSize: '0.95rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
             Ready to tackle your coding tasks today? Keep up the good work!
@@ -367,77 +350,115 @@ function DashboardContent({ searchQuery }) {
       {error && <div className="login-error">{error}</div>}
       {success && <div className="save-indicator" style={{ marginBottom: '12px' }}>{success}</div>}
 
-      {/* Grid: Tasks Board & Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
-        
-        {/* Today's Tasks board */}
-        <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-heading)', margin: 0 }}>
-              Today's Tasks
-            </h3>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Completed: {userTasks.filter(t => t.status === 'Completed').length} / {userTasks.length}
-            </span>
-          </div>
-
-          {userTasks.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', border: '1.5px dashed var(--card-border)', borderRadius: '8px', color: 'var(--text-muted)' }}>
-              <p style={{ margin: 0 }}>Your tasks list is empty.</p>
-              <p style={{ fontSize: '0.8rem', margin: '4px 0 0 0' }}>Browse curriculum topics below to add learning tasks.</p>
+      {/* Conditional module-wise content rendering based on selected Navbar filter */}
+      {filter ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
+          
+          {/* Today's Tasks board */}
+          <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-heading)', margin: 0 }}>
+                {filter === 'today' ? "Today's Active Tasks" : "All Coding Tasks"}
+              </h3>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Completed: {userTasks.filter(t => t.status === 'Completed').length} / {userTasks.length}
+              </span>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {userTasks.map((task) => (
-                <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--list-item-bg)', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+
+            {filteredUserTasks.length === 0 ? (
+              <div style={{ padding: '32px 16px', textAlign: 'center', border: '1.5px dashed var(--card-border)', borderRadius: '8px', color: 'var(--text-muted)' }}>
+                <p style={{ margin: 0 }}>Your tasks list is empty.</p>
+                <p style={{ fontSize: '0.8rem', margin: '4px 0 0 0' }}>Browse curriculum topics in Dashboard to add learning tasks.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {filteredUserTasks.map((task) => (
+                  <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--list-item-bg)', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.7rem', padding: '1px 4px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', textTransform: 'uppercase', fontWeight: '600', color: 'var(--text-muted)' }}>
+                          {task.item_type}
+                        </span>
+                        <span 
+                          style={{ 
+                            fontWeight: '600', 
+                            color: 'var(--text-heading)',
+                            textDecoration: task.status === 'Completed' ? 'line-through' : 'none',
+                            opacity: task.status === 'Completed' ? 0.6 : 1
+                          }}
+                        >
+                          {task.details?.title || 'Coding task'}
+                        </span>
+                      </div>
+                    </div>
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '0.7rem', padding: '1px 4px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', textTransform: 'uppercase', fontWeight: '600', color: 'var(--text-muted)' }}>
-                        {task.item_type}
-                      </span>
-                      <span 
+                      <button 
+                        onClick={() => handleUpdateTaskStatus(task.id, task.status)}
+                        className="btn" 
                         style={{ 
-                          fontWeight: '600', 
-                          color: 'var(--text-heading)',
-                          textDecoration: task.status === 'Completed' ? 'line-through' : 'none',
-                          opacity: task.status === 'Completed' ? 0.6 : 1
+                          padding: '4px 10px', 
+                          fontSize: '0.75rem',
+                          backgroundColor: task.status === 'Completed' ? '#e6f4ea' : task.status === 'In Progress' ? '#e8f0fe' : 'var(--btn-secondary-bg)',
+                          color: task.status === 'Completed' ? '#137333' : task.status === 'In Progress' ? '#1a73e8' : 'var(--text-color)',
+                          border: '1px solid ' + (task.status === 'Completed' ? '#ceead6' : task.status === 'In Progress' ? '#d2e3fc' : 'var(--card-border)')
                         }}
                       >
-                        {task.details?.title || 'Coding task'}
-                      </span>
+                        {task.status}
+                      </button>
+                      <button 
+                        onClick={() => handleRemoveTask(task.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem', padding: '4px' }}
+                        title="Remove from board"
+                      >
+                        &times;
+                      </button>
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* Status badge and update */}
-                    <button 
-                      onClick={() => handleUpdateTaskStatus(task.id, task.status)}
-                      className="btn" 
-                      style={{ 
-                        padding: '4px 10px', 
-                        fontSize: '0.75rem',
-                        backgroundColor: task.status === 'Completed' ? '#e6f4ea' : task.status === 'In Progress' ? '#e8f0fe' : 'var(--btn-secondary-bg)',
-                        color: task.status === 'Completed' ? '#137333' : task.status === 'In Progress' ? '#1a73e8' : 'var(--text-color)',
-                        border: '1px solid ' + (task.status === 'Completed' ? '#ceead6' : task.status === 'In Progress' ? '#d2e3fc' : 'var(--card-border)')
-                      }}
-                    >
-                      {task.status}
-                    </button>
-                    <button 
-                      onClick={() => handleRemoveTask(task.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem', padding: '4px' }}
-                      title="Remove from board"
-                    >
-                      &times;
-                    </button>
-                  </div>
+          {/* Learning Statistics & Recommendations Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Recommendations Card */}
+            <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '12px', color: 'var(--text-heading)' }}>
+                Recommended for You
+              </h3>
+              {userStats.recommendations && userStats.recommendations.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {userStats.recommendations.map(rec => (
+                    <div key={rec.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: 'var(--list-item-bg)', border: '1px solid var(--card-border)', borderRadius: '6px' }}>
+                      <div style={{ flex: 1, marginRight: '8px' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+                          {rec.topic_title}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-heading)' }}>
+                          {rec.title}
+                        </div>
+                      </div>
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ padding: '4px 8px', fontSize: '0.7rem' }}
+                        onClick={() => handleQuickAdd(rec.id, 'question')}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Awesome job! No unfinished tasks left to recommend.
+                </p>
+              )}
             </div>
-          )}
+          </div>
         </div>
-
-        {/* Learning Statistics & Recommendations Column */}
+      ) : (
+        /* Default Home Dashboard - explore curriculum and general progress */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Stats Card */}
@@ -445,9 +466,7 @@ function DashboardContent({ searchQuery }) {
             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-heading)' }}>
               Overall Progress
             </h3>
-            
-            {/* Circle Progress Bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
               <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', overflow: 'hidden' }}>
                 <div style={{ width: `${userStats.learningPercentage}%`, height: '100%', backgroundColor: '#1a73e8', borderRadius: '4px', transition: 'width 0.5s ease-in-out' }}></div>
               </div>
@@ -456,106 +475,70 @@ function DashboardContent({ searchQuery }) {
                 <span style={{ fontWeight: '700', color: 'var(--link-color)' }}>{userStats.learningPercentage}%</span>
               </div>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--card-border)', paddingTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Completed Topics:</span>
+            <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid var(--card-border)', paddingTop: '16px' }}>
+              <div style={{ fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Completed Topics: </span>
                 <span style={{ fontWeight: '600', color: 'var(--text-heading)' }}>
                   {userStats.completedTopicsCount} / {userStats.totalTopicsCount}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Completed Tasks:</span>
+              <div style={{ fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Completed Tasks: </span>
                 <span style={{ fontWeight: '600', color: 'var(--text-heading)' }}>{userStats.completedTasksCount}</span>
               </div>
             </div>
           </div>
 
-          {/* Recommendations Card */}
-          <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '12px', color: 'var(--text-heading)' }}>
-              Recommended for You
+          {/* Curriculum Explore Grid */}
+          <div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-heading)' }}>
+              Explore Curriculum Topics
             </h3>
-            {userStats.recommendations && userStats.recommendations.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {userStats.recommendations.map(rec => (
-                  <div key={rec.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: 'var(--list-item-bg)', border: '1px solid var(--card-border)', borderRadius: '6px' }}>
-                    <div style={{ flex: 1, marginRight: '8px' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>
-                        {rec.topic_title}
-                      </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-heading)' }}>
-                        {rec.title}
-                      </div>
+            <div className="todos-grid">
+              {filteredTopics.map((topic) => (
+                <div key={topic.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                        {topic.category}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '500', color: topic.difficulty === 'Advanced' ? '#d93025' : topic.difficulty === 'Intermediate' ? '#b06000' : '#137333' }}>
+                        {topic.difficulty}
+                      </span>
                     </div>
+                    <h4 className="card-title" onClick={() => router.push(`/todo/${topic.id}`)}>
+                      {topic.title}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Est. Time: {topic.estimated_time}</span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                      <div style={{ flex: 1, height: '4px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: `${topic.progress_percentage || 0}%`, height: '100%', backgroundColor: '#137333' }}></div>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)' }}>{topic.progress_percentage || 0}%</span>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '12px', marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <button 
-                      className="btn btn-primary" 
-                      style={{ padding: '4px 8px', fontSize: '0.7rem' }}
-                      onClick={() => handleQuickAdd(rec.id, 'question')}
+                      className="btn btn-secondary" 
+                      style={{ padding: '4px 8px', fontSize: '0.75rem' }} 
+                      onClick={() => handleQuickAdd(topic.id, 'topic')}
                     >
-                      + Quick Add
+                      + Add to Today
+                    </button>
+                    <button className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => router.push(`/todo/${topic.id}`)}>
+                      Study Topic &rarr;
                     </button>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                Awesome job! No unfinished tasks left to recommend.
-              </p>
-            )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Curriculum Browse Grid */}
-      <div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-heading)' }}>
-          Explore Curriculum Topics
-        </h3>
-        <div className="todos-grid">
-          {filteredTopics.map((topic) => (
-            <div key={topic.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)' }}>
-                    {topic.category}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '500', color: topic.difficulty === 'Advanced' ? '#d93025' : topic.difficulty === 'Intermediate' ? '#b06000' : '#137333' }}>
-                    {topic.difficulty}
-                  </span>
-                </div>
-                <h4 className="card-title" onClick={() => router.push(`/todo/${topic.id}`)}>
-                  {topic.title}
-                </h4>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Est. Time: {topic.estimated_time}</span>
-                </div>
-                
-                {/* Topic progress indicator */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-                  <div style={{ flex: 1, height: '4px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '2px', overflow: 'hidden' }}>
-                    <div style={{ width: `${topic.progress_percentage || 0}%`, height: '100%', backgroundColor: '#137333' }}></div>
-                  </div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)' }}>{topic.progress_percentage || 0}%</span>
-                </div>
-              </div>
-
-              <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '12px', marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button 
-                  className="btn btn-secondary" 
-                  style={{ padding: '4px 8px', fontSize: '0.75rem' }} 
-                  onClick={() => handleQuickAdd(topic.id, 'topic')}
-                >
-                  + Add to Today
-                </button>
-                <button className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => router.push(`/todo/${topic.id}`)}>
-                  Study Topic &rarr;
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
