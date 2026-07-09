@@ -267,6 +267,56 @@ function DashboardContent({ searchQuery }) {
     return items;
   }, [topics, allQuestions, userTasks, filter, searchQuery]);
 
+  const groupedTasks = useMemo(() => {
+    const statusMap = {};
+    userTasks.forEach(t => {
+      statusMap[`${t.item_type}_${t.item_id}`] = {
+        id: t.id,
+        status: t.status
+      };
+    });
+
+    const groups = topics.map(topic => {
+      const topicTask = statusMap[`topic_${topic.id}`] || {};
+      
+      const topicQuestions = allQuestions.filter(q => q.todo_id === topic.id).map(q => {
+        const qTask = statusMap[`question_${q.id}`] || {};
+        return {
+          id: q.id,
+          title: q.title,
+          status: qTask.status || 'Pending',
+          taskId: qTask.id || null
+        };
+      });
+
+      return {
+        id: topic.id,
+        title: topic.title,
+        category: topic.category,
+        difficulty: topic.difficulty,
+        status: topicTask.status || 'Pending',
+        taskId: topicTask.id || null,
+        questions: topicQuestions
+      };
+    });
+
+    if (searchQuery) {
+      return groups.filter(g => 
+        g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        g.questions.some(q => q.title.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+    return groups;
+  }, [topics, allQuestions, userTasks, searchQuery]);
+
+  const allTasksCount = useMemo(() => {
+    return groupedTasks.reduce((acc, g) => acc + 1 + g.questions.length, 0);
+  }, [groupedTasks]);
+
+  const completedTasksCount = useMemo(() => {
+    return groupedTasks.reduce((acc, g) => acc + (g.status === 'Completed' ? 1 : 0) + g.questions.filter(q => q.status === 'Completed').length, 0);
+  }, [groupedTasks]);
+
   if (!user) {
     return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>;
   }
@@ -430,71 +480,173 @@ function DashboardContent({ searchQuery }) {
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
           
           {/* Today's Tasks board */}
-          <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-heading)', margin: 0 }}>
-                {filter === 'today' ? "Today's Active Tasks" : "All Coding Tasks"}
-              </h3>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Completed: {renderTasks.filter(t => t.status === 'Completed').length} / {renderTasks.length}
-              </span>
-            </div>
-
-            {renderTasks.length === 0 ? (
-              <div style={{ padding: '32px 16px', textAlign: 'center', border: '1.5px dashed var(--card-border)', borderRadius: '8px', color: 'var(--text-muted)' }}>
-                <p style={{ margin: 0 }}>Your tasks list is empty.</p>
-                <p style={{ fontSize: '0.8rem', margin: '4px 0 0 0' }}>Browse curriculum topics in Dashboard to add learning tasks.</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="card" style={{ minHeight: 'auto', padding: '24px', marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-heading)', margin: 0 }}>
+                  {filter === 'today' ? "Today's Active Tasks" : "All Coding Tasks"}
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {filter === 'today' ? (
+                    `Completed: ${renderTasks.filter(t => t.status === 'Completed').length} / ${renderTasks.length}`
+                  ) : (
+                    `Completed: ${completedTasksCount} / ${allTasksCount}`
+                  )}
+                </span>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {renderTasks.map((task) => (
-                  <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--list-item-bg)', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.7rem', padding: '1px 4px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', textTransform: 'uppercase', fontWeight: '600', color: 'var(--text-muted)' }}>
-                          {task.item_type}
-                        </span>
-                        <span 
-                          style={{ 
-                            fontWeight: '600', 
-                            color: 'var(--text-heading)',
-                            textDecoration: task.status === 'Completed' ? 'line-through' : 'none',
-                            opacity: task.status === 'Completed' ? 0.6 : 1
-                          }}
-                        >
-                          {task.title}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button 
-                        onClick={() => handleToggleItemStatus(task)}
-                        className="btn" 
-                        style={{ 
-                          padding: '4px 10px', 
-                          fontSize: '0.75rem',
-                          backgroundColor: task.status === 'Completed' ? '#e6f4ea' : task.status === 'In Progress' ? '#e8f0fe' : 'var(--btn-secondary-bg)',
-                          color: task.status === 'Completed' ? '#137333' : task.status === 'In Progress' ? '#1a73e8' : 'var(--text-color)',
-                          border: '1px solid ' + (task.status === 'Completed' ? '#ceead6' : task.status === 'In Progress' ? '#d2e3fc' : 'var(--card-border)')
-                        }}
-                      >
-                        {task.status}
-                      </button>
-                      {task.taskId && (
-                        <button 
-                          onClick={() => handleRemoveTaskItem(task)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem', padding: '4px' }}
-                          title="Remove from board"
-                        >
-                          &times;
-                        </button>
-                      )}
-                    </div>
+              {filter === 'today' ? (
+                renderTasks.length === 0 ? (
+                  <div style={{ padding: '32px 16px', textAlign: 'center', border: '1.5px dashed var(--card-border)', borderRadius: '8px', color: 'var(--text-muted)' }}>
+                    <p style={{ margin: 0 }}>Your tasks list is empty.</p>
+                    <p style={{ fontSize: '0.8rem', margin: '4px 0 0 0' }}>Browse curriculum topics in Dashboard to add learning tasks.</p>
                   </div>
-                ))}
-              </div>
-            )}
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {renderTasks.map((task) => (
+                      <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--list-item-bg)', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.7rem', padding: '1px 4px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', textTransform: 'uppercase', fontWeight: '600', color: 'var(--text-muted)' }}>
+                              {task.item_type}
+                            </span>
+                            <span 
+                              style={{ 
+                                fontWeight: '600', 
+                                color: 'var(--text-heading)',
+                                textDecoration: task.status === 'Completed' ? 'line-through' : 'none',
+                                opacity: task.status === 'Completed' ? 0.6 : 1
+                              }}
+                            >
+                              {task.title}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button 
+                            onClick={() => handleToggleItemStatus(task)}
+                            className="btn" 
+                            style={{ 
+                              padding: '4px 10px', 
+                              fontSize: '0.75rem',
+                              backgroundColor: task.status === 'Completed' ? '#e6f4ea' : task.status === 'In Progress' ? '#e8f0fe' : 'var(--btn-secondary-bg)',
+                              color: task.status === 'Completed' ? '#137333' : task.status === 'In Progress' ? '#1a73e8' : 'var(--text-color)',
+                              border: '1px solid ' + (task.status === 'Completed' ? '#ceead6' : task.status === 'In Progress' ? '#d2e3fc' : 'var(--card-border)')
+                            }}
+                          >
+                            {task.status}
+                          </button>
+                          {task.taskId && (
+                            <button 
+                              onClick={() => handleRemoveTaskItem(task)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem', padding: '4px' }}
+                              title="Remove from board"
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                /* Grouped Topics and Questions */
+                groupedTasks.length === 0 ? (
+                  <div style={{ padding: '32px 16px', textAlign: 'center', border: '1.5px dashed var(--card-border)', borderRadius: '8px', color: 'var(--text-muted)' }}>
+                    No topics or questions match your search.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {groupedTasks.map((group) => (
+                      <div key={group.id} style={{ border: '1px solid var(--card-border)', borderRadius: '8px', padding: '16px', backgroundColor: 'var(--card-bg)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)', marginRight: '8px', textTransform: 'uppercase' }}>
+                              {group.category}
+                            </span>
+                            <span style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-heading)' }}>
+                              {group.title}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              onClick={() => handleToggleItemStatus({ taskId: group.taskId, status: group.status, dbId: group.id, item_type: 'topic' })}
+                              className="btn"
+                              style={{
+                                padding: '4px 10px',
+                                fontSize: '0.7rem',
+                                backgroundColor: group.status === 'Completed' ? '#e6f4ea' : group.status === 'In Progress' ? '#e8f0fe' : 'var(--btn-secondary-bg)',
+                                color: group.status === 'Completed' ? '#137333' : group.status === 'In Progress' ? '#1a73e8' : 'var(--text-color)',
+                                border: '1px solid ' + (group.status === 'Completed' ? '#ceead6' : group.status === 'In Progress' ? '#d2e3fc' : 'var(--card-border)')
+                              }}
+                            >
+                              {group.status}
+                            </button>
+                            {group.taskId && (
+                              <button
+                                onClick={() => handleRemoveTaskItem({ taskId: group.taskId })}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem', padding: '2px' }}
+                                title="Remove from board"
+                              >
+                                &times;
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Questions list under this topic */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '8px' }}>
+                          {group.questions.length === 0 ? (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              No questions under this topic.
+                            </span>
+                          ) : (
+                            group.questions.map((q) => (
+                              <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: 'var(--list-item-bg)', border: '1px solid var(--card-border)', borderRadius: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, marginRight: '8px' }}>
+                                  <span style={{ fontSize: '0.65rem', padding: '1px 4px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '4px', textTransform: 'uppercase', fontWeight: '600', color: 'var(--text-muted)' }}>
+                                    question
+                                  </span>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-heading)', textDecoration: q.status === 'Completed' ? 'line-through' : 'none', opacity: q.status === 'Completed' ? 0.6 : 1 }}>
+                                    {q.title}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <button
+                                    onClick={() => handleToggleItemStatus({ taskId: q.taskId, status: q.status, dbId: q.id, item_type: 'question' })}
+                                    className="btn"
+                                    style={{
+                                      padding: '3px 8px',
+                                      fontSize: '0.7rem',
+                                      backgroundColor: q.status === 'Completed' ? '#e6f4ea' : q.status === 'In Progress' ? '#e8f0fe' : 'var(--btn-secondary-bg)',
+                                      color: q.status === 'Completed' ? '#137333' : q.status === 'In Progress' ? '#1a73e8' : 'var(--text-color)',
+                                      border: '1px solid ' + (q.status === 'Completed' ? '#ceead6' : q.status === 'In Progress' ? '#d2e3fc' : 'var(--card-border)')
+                                    }}
+                                  >
+                                    {q.status}
+                                  </button>
+                                  {q.taskId && (
+                                    <button
+                                      onClick={() => handleRemoveTaskItem({ taskId: q.taskId })}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '2px' }}
+                                      title="Remove from board"
+                                    >
+                                      &times;
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
           </div>
 
           {/* Learning Statistics & Recommendations Column */}
@@ -573,7 +725,7 @@ function DashboardContent({ searchQuery }) {
               Explore Curriculum Topics
             </h3>
             <div className="todos-grid">
-              {filteredTopics.map((topic) => (
+              {filteredTopics.slice(0, 3).map((topic) => (
                 <div key={topic.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -615,6 +767,18 @@ function DashboardContent({ searchQuery }) {
                 </div>
               ))}
             </div>
+
+            {filteredTopics.length > 3 && (
+              <div style={{ textAlign: 'center', marginTop: '24px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => router.push('/?filter=all')}
+                  style={{ padding: '8px 16px', fontSize: '0.85rem', fontWeight: '600' }}
+                >
+                  View All Curriculum Topics ({filteredTopics.length}) &rarr;
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
