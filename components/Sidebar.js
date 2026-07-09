@@ -1,9 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { memo } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
-const Sidebar = ({ onExportPDF, isDarkMode, toggleTheme }) => {
+const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme }) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -98,6 +98,6 @@ const Sidebar = ({ onExportPDF, isDarkMode, toggleTheme }) => {
       </ul>
     </div>
   );
-};
+});
 
 export default Sidebar;

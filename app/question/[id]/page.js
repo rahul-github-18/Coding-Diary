@@ -99,7 +99,30 @@ function QuestionDetailContent() {
   }
 
   if (loading) {
-    return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading question editor...</div>;
+    return (
+      <div className="detail-layout" style={{ flex: 1 }}>
+        <div className="detail-header" style={{ borderBottom: 'none' }}>
+          <div>
+            <div className="skeleton" style={{ width: '150px', height: '30px', marginBottom: '12px' }} />
+            <div className="skeleton skeleton-title" style={{ width: '250px' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <div className="skeleton" style={{ width: '150px', height: '20px' }} />
+            <div className="skeleton" style={{ width: '120px', height: '36px' }} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '24px', height: '400px', marginTop: '24px' }}>
+          <div className="skeleton-card" style={{ flex: 1, height: '100%' }}>
+            <div className="skeleton skeleton-title" style={{ width: '80px' }} />
+            <div className="skeleton" style={{ flex: 1, height: '100%' }} />
+          </div>
+          <div className="skeleton-card" style={{ flex: 1, height: '100%' }}>
+            <div className="skeleton skeleton-title" style={{ width: '120px' }} />
+            <div className="skeleton" style={{ flex: 1, height: '100%' }} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

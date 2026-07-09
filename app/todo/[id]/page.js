@@ -1,10 +1,139 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Editor from '@monaco-editor/react';
 import Layout from '@/components/Layout';
 import { todoService, questionService } from '@/lib/api';
+
+function NotesCodeModal({ activeModal, activeQuestion, closeModal, onSave }) {
+  const [notes, setNotes] = useState(activeQuestion.notes || '');
+  const [code, setCode] = useState(activeQuestion.code || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    setSavedSuccess(false);
+    try {
+      await onSave(notes, code);
+      setSavedSuccess(true);
+      setTimeout(() => {
+        setSavedSuccess(false);
+      }, 3000);
+    } catch (err) {
+      console.error(err);
+      setError('Save failed. Could not save notes and code.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return 'Never';
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  return (
+    <div className="modal-overlay" onClick={closeModal}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        {/* Modal Header */}
+        <div className="modal-header">
+          <span className="modal-title">{activeQuestion.title}</span>
+          <button 
+            className="btn btn-secondary" 
+            style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+            onClick={closeModal}
+          >
+            Close &times;
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="modal-body">
+          {error && <div className="login-error" style={{ marginBottom: '16px' }}>{error}</div>}
+          
+          <div className={`modal-editor-grid ${activeModal === 'both' ? 'split' : ''}`} style={{ flex: 1 }}>
+            {/* Notes Column */}
+            {(activeModal === 'notes' || activeModal === 'both') && (
+              <div className="editor-pane">
+                <label className="form-label" style={{ fontWeight: '600', marginBottom: '8px' }}>Notes</label>
+                <textarea
+                  className="notes-textarea"
+                  placeholder="Write notes here... (e.g. approach, time complexity, tips)"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  style={{ height: '100%' }}
+                />
+              </div>
+            )}
+
+            {/* Code Column */}
+            {(activeModal === 'code' || activeModal === 'both') && (
+              <div className="editor-pane">
+                <label className="form-label" style={{ fontWeight: '600', marginBottom: '8px' }}>Java Code Editor</label>
+                <div className="monaco-wrapper" style={{ height: '100%', minHeight: '300px' }}>
+                  <Editor
+                    height="100%"
+                    defaultLanguage="java"
+                    theme="vs-dark"
+                    value={code}
+                    onChange={(value) => setCode(value || '')}
+                    options={{
+                      selectOnLineNumbers: true,
+                      lineNumbers: 'on',
+                      wordWrap: 'on',
+                      autoClosingBrackets: 'always',
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      automaticLayout: true
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="modal-footer">
+          <div className="modal-footer-left">
+            {savedSuccess && (
+              <div className="save-indicator">
+                Saved Successfully
+              </div>
+            )}
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Last Updated: {formatTimestamp(activeQuestion.updated_at)}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button className="btn btn-secondary" onClick={closeModal}>
+              Close
+            </button>
+            <button 
+              className="btn btn-primary" 
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save Notes & Code'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TodoDetailContent({ searchQuery }) {
   const { id: todoId } = useParams();
@@ -22,11 +151,6 @@ function TodoDetailContent({ searchQuery }) {
   // Modal States
   const [activeModal, setActiveModal] = useState(null); // 'notes', 'code', or 'both'
   const [activeQuestion, setActiveQuestion] = useState(null);
-  const [modalNotes, setModalNotes] = useState('');
-  const [modalCode, setModalCode] = useState('');
-  const [modalSaving, setModalSaving] = useState(false);
-  const [modalSavedSuccess, setModalSavedSuccess] = useState(false);
-  const [modalError, setModalError] = useState('');
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -42,7 +166,12 @@ function TodoDetailContent({ searchQuery }) {
     setLoading(true);
     setError('');
     try {
-      const todosData = await todoService.getTodos();
+      // Parallel fetch of todos and questions to avoid waterfall
+      const [todosData, questionsData] = await Promise.all([
+        todoService.getTodos(),
+        questionService.getQuestions(todoId)
+      ]);
+
       const currentTodo = todosData.find(t => t.id === parseInt(todoId));
       if (!currentTodo) {
         setError('Todo item not found.');
@@ -50,8 +179,6 @@ function TodoDetailContent({ searchQuery }) {
         return;
       }
       setTodo(currentTodo);
-
-      const questionsData = await questionService.getQuestions(todoId);
       setQuestions(questionsData);
     } catch (err) {
       console.error(err);
@@ -124,91 +251,44 @@ function TodoDetailContent({ searchQuery }) {
   // Modal Open Handlers
   const openNotesModal = (q) => {
     setActiveQuestion(q);
-    setModalNotes(q.notes || '');
-    setModalCode(q.code || '');
-    setModalError('');
-    setModalSavedSuccess(false);
     setActiveModal('notes');
   };
 
   const openCodeModal = (q) => {
     setActiveQuestion(q);
-    setModalNotes(q.notes || '');
-    setModalCode(q.code || '');
-    setModalError('');
-    setModalSavedSuccess(false);
     setActiveModal('code');
   };
 
   const openCombinedModal = (q) => {
     setActiveQuestion(q);
-    setModalNotes(q.notes || '');
-    setModalCode(q.code || '');
-    setModalError('');
-    setModalSavedSuccess(false);
     setActiveModal('both');
   };
 
   const closeModal = () => {
     setActiveModal(null);
     setActiveQuestion(null);
-    setModalNotes('');
-    setModalCode('');
-    setModalError('');
-    setModalSavedSuccess(false);
   };
 
-  const handleSaveModalData = async () => {
-    setModalSaving(true);
-    setModalError('');
-    setModalSavedSuccess(false);
-
-    try {
-      const updated = await questionService.updateQuestion(activeQuestion.id, {
-        notes: modalNotes,
-        code: modalCode
-      });
-
-      // Update question in local list state
-      setQuestions(questions.map(q => q.id === activeQuestion.id ? updated : q));
-      setActiveQuestion(updated);
-      setModalSavedSuccess(true);
-
-      setTimeout(() => {
-        setModalSavedSuccess(false);
-      }, 3000);
-    } catch (err) {
-      console.error(err);
-      setModalError('Save failed. Could not save notes and code.');
-    } finally {
-      setModalSaving(false);
-    }
-  };
-
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return 'Never';
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
+  const handleSaveModalData = async (notes, code) => {
+    const updated = await questionService.updateQuestion(activeQuestion.id, {
+      notes,
+      code
     });
+
+    // Update question in local list state
+    setQuestions(questions.map(q => q.id === activeQuestion.id ? updated : q));
+    setActiveQuestion(updated);
   };
 
-  // Instant filter search logic
-  const filteredQuestions = questions.filter(q =>
-    q.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Instant filter search logic memoized
+  const filteredQuestions = useMemo(() => {
+    return questions.filter(q =>
+      q.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [questions, searchQuery]);
 
   if (!authorized) {
     return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Checking authorization...</div>;
-  }
-
-  if (loading) {
-    return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading todo details...</div>;
   }
 
   return (
@@ -244,7 +324,21 @@ function TodoDetailContent({ searchQuery }) {
       {/* Questions list */}
       <div>
         <h3 style={{ fontSize: '1.15rem', marginBottom: '16px', color: 'var(--text-heading)' }}>Questions</h3>
-        {filteredQuestions.length === 0 ? (
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {[1, 2].map((i) => (
+              <div key={i} className="skeleton-list-item">
+                <div className="skeleton" style={{ width: '40%', height: '20px' }}></div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="skeleton" style={{ width: '60px', height: '28px' }}></div>
+                  <div className="skeleton" style={{ width: '60px', height: '28px' }}></div>
+                  <div className="skeleton" style={{ width: '55px', height: '28px' }}></div>
+                  <div className="skeleton" style={{ width: '60px', height: '28px' }}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredQuestions.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-title">No questions found</div>
             <p>
@@ -316,93 +410,12 @@ function TodoDetailContent({ searchQuery }) {
 
       {/* Floating Modal Editor Popup */}
       {activeModal && activeQuestion && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="modal-header">
-              <span className="modal-title">{activeQuestion.title}</span>
-              <button 
-                className="btn btn-secondary" 
-                style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                onClick={closeModal}
-              >
-                Close &times;
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="modal-body">
-              {modalError && <div className="login-error" style={{ marginBottom: '16px' }}>{modalError}</div>}
-              
-              <div className={`modal-editor-grid ${activeModal === 'both' ? 'split' : ''}`} style={{ flex: 1 }}>
-                {/* Notes Column */}
-                {(activeModal === 'notes' || activeModal === 'both') && (
-                  <div className="editor-pane">
-                    <label className="form-label" style={{ fontWeight: '600', marginBottom: '8px' }}>Notes</label>
-                    <textarea
-                      className="notes-textarea"
-                      placeholder="Write notes here... (e.g. approach, time complexity, tips)"
-                      value={modalNotes}
-                      onChange={(e) => setModalNotes(e.target.value)}
-                      style={{ height: '100%' }}
-                    />
-                  </div>
-                )}
-
-                {/* Code Column */}
-                {(activeModal === 'code' || activeModal === 'both') && (
-                  <div className="editor-pane">
-                    <label className="form-label" style={{ fontWeight: '600', marginBottom: '8px' }}>Java Code Editor</label>
-                    <div className="monaco-wrapper" style={{ height: '100%', minHeight: '300px' }}>
-                      <Editor
-                        height="100%"
-                        defaultLanguage="java"
-                        theme="vs-dark"
-                        value={modalCode}
-                        onChange={(value) => setModalCode(value || '')}
-                        options={{
-                          selectOnLineNumbers: true,
-                          lineNumbers: 'on',
-                          wordWrap: 'on',
-                          autoClosingBrackets: 'always',
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          automaticLayout: true
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="modal-footer">
-              <div className="modal-footer-left">
-                {modalSavedSuccess && (
-                  <div className="save-indicator">
-                    Saved Successfully
-                  </div>
-                )}
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Last Updated: {formatTimestamp(activeQuestion.updated_at)}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button className="btn btn-secondary" onClick={closeModal}>
-                  Close
-                </button>
-                <button 
-                  className="btn btn-primary" 
-                  onClick={handleSaveModalData}
-                  disabled={modalSaving}
-                >
-                  {modalSaving ? 'Saving...' : 'Save Notes & Code'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <NotesCodeModal
+          activeModal={activeModal}
+          activeQuestion={activeQuestion}
+          closeModal={closeModal}
+          onSave={handleSaveModalData}
+        />
       )}
     </div>
   );

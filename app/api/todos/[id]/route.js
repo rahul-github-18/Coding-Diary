@@ -4,7 +4,9 @@ import { supabase } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 export async function PUT(req, { params }) {
+  const requestStart = Date.now();
   const { id } = params;
+  console.log(`[API PUT /api/todos/${id}] Start`);
   try {
     const { title, completed } = await req.json();
 
@@ -24,18 +26,27 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ message: 'No fields provided for update.' }, { status: 400 });
     }
 
+    console.time(`Supabase Query: Update Todo ${id}`);
+    const queryStart = Date.now();
     const { data: updatedTodo, error } = await supabase
       .from('todos')
       .update(updateData)
       .eq('id', id)
-      .select()
+      .select('id, title, completed, created_date')
       .maybeSingle();
+    console.timeEnd(`Supabase Query: Update Todo ${id}`);
+    const queryEnd = Date.now();
+    console.log(`[API PUT /api/todos/${id}] Supabase query execution time: ${queryEnd - queryStart} ms`);
 
     if (error) throw error;
 
     if (!updatedTodo) {
       return NextResponse.json({ message: 'Todo item not found.' }, { status: 404 });
     }
+
+    const requestEnd = Date.now();
+    console.log(`[API PUT /api/todos/${id}] API execution time: ${requestEnd - requestStart} ms`);
+    console.log(`[API PUT /api/todos/${id}] Total request time: ${requestEnd - requestStart} ms`);
 
     return NextResponse.json(updatedTodo);
   } catch (error) {
@@ -45,20 +56,31 @@ export async function PUT(req, { params }) {
 }
 
 export async function DELETE(req, { params }) {
+  const requestStart = Date.now();
   const { id } = params;
+  console.log(`[API DELETE /api/todos/${id}] Start`);
   try {
+    console.time(`Supabase Query: Delete Todo ${id}`);
+    const queryStart = Date.now();
     const { data: deletedTodo, error } = await supabase
       .from('todos')
       .delete()
       .eq('id', id)
-      .select()
+      .select('id')
       .maybeSingle();
+    console.timeEnd(`Supabase Query: Delete Todo ${id}`);
+    const queryEnd = Date.now();
+    console.log(`[API DELETE /api/todos/${id}] Supabase query execution time: ${queryEnd - queryStart} ms`);
 
     if (error) throw error;
 
     if (!deletedTodo) {
       return NextResponse.json({ message: 'Todo item not found.' }, { status: 404 });
     }
+
+    const requestEnd = Date.now();
+    console.log(`[API DELETE /api/todos/${id}] API execution time: ${requestEnd - requestStart} ms`);
+    console.log(`[API DELETE /api/todos/${id}] Total request time: ${requestEnd - requestStart} ms`);
 
     return NextResponse.json({ message: 'Todo deleted successfully.' });
   } catch (error) {

@@ -626,3 +626,58 @@ body {
     padding: 16px;
   }
 }
+
+/* Skeleton Loader Animation & Classes */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background-color: var(--btn-secondary-bg);
+  border-radius: 4px;
+}
+
+.skeleton-text {
+  height: 16px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.skeleton-text.short {
+  width: 60%;
+}
+
+.skeleton-title {
+  height: 24px;
+  margin-bottom: 16px;
+  width: 40%;
+}
+
+.skeleton-card {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 20px;
+  background-color: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 1px 2px var(--shadow-color);
+}
+
+.skeleton-list-item {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  background-color: var(--card-bg);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+

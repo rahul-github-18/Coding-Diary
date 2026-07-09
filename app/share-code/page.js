@@ -1,10 +1,40 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Editor from '@monaco-editor/react';
 import Layout from '@/components/Layout';
 import { shareService } from '@/lib/api';
+
+function ExpiryCountdown({ createdAtStr }) {
+  const [countdown, setCountdown] = useState('');
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const createdTime = new Date(createdAtStr.replace(/-/g, '/')).getTime();
+      const expiryTime = createdTime + (15 * 60 * 1000); // 15 minutes
+      const remainingMs = expiryTime - Date.now();
+
+      if (remainingMs <= 0) {
+        setCountdown('Expired');
+      } else {
+        const minutes = Math.floor(remainingMs / 60000);
+        const seconds = Math.floor((remainingMs % 60000) / 1000);
+        setCountdown(`${minutes}m ${seconds}s`);
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [createdAtStr]);
+
+  return (
+    <div style={{ fontSize: '0.8rem', color: '#d93025', marginTop: '4px', fontWeight: '600' }}>
+      Expires in: {countdown}
+    </div>
+  );
+}
 
 function ShareCodeContent() {
   const [sharedCodes, setSharedCodes] = useState([]);
@@ -13,7 +43,6 @@ function ShareCodeContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [currentTime, setCurrentTime] = useState(Date.now());
   const [authorized, setAuthorized] = useState(false);
 
   const router = useRouter();
@@ -26,13 +55,6 @@ function ShareCodeContent() {
       setAuthorized(true);
       fetchSharedCodes();
     }
-
-    // Set up timer interval to tick every second to update countdowns
-    const timer = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-
-    return () => clearInterval(timer);
   }, [router]);
 
   const fetchSharedCodes = async () => {
@@ -82,28 +104,14 @@ function ShareCodeContent() {
     }
   };
 
-  // Helper to format remaining time
-  const getRemainingTime = (createdAtStr) => {
-    // Replace hyphens with slashes for cross-browser Date parsing compatibility
-    const createdTime = new Date(createdAtStr.replace(/-/g, '/')).getTime();
-    const expiryTime = createdTime + (15 * 60 * 1000); // 15 minutes
-    const remainingMs = expiryTime - currentTime;
-
-    if (remainingMs <= 0) {
-      return 'Expired';
-    }
-
-    const minutes = Math.floor(remainingMs / 60000);
-    const seconds = Math.floor((remainingMs % 60000) / 1000);
-    return `${minutes}m ${seconds}s`;
-  };
-
-  // Filter out items that are locally expired (though backend cleans them up, local timers sync it instantly)
-  const activeShares = sharedCodes.filter(item => {
-    const createdTime = new Date(item.created_at.replace(/-/g, '/')).getTime();
-    const expiryTime = createdTime + (15 * 60 * 1000);
-    return expiryTime - currentTime > 0;
-  });
+  // Filter out items that are locally expired (memoized)
+  const activeShares = useMemo(() => {
+    return sharedCodes.filter(item => {
+      const createdTime = new Date(item.created_at.replace(/-/g, '/')).getTime();
+      const expiryTime = createdTime + (15 * 60 * 1000);
+      return expiryTime - Date.now() > 0;
+    });
+  }, [sharedCodes]);
 
   if (!authorized) {
     return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Checking authorization...</div>;
@@ -165,7 +173,20 @@ function ShareCodeContent() {
       <div>
         <h3 style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--text-heading)', marginBottom: '16px' }}>Active Shared Snippets</h3>
         {loading ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>Loading active shared codes...</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {[1].map((i) => (
+              <div key={i} className="skeleton-card" style={{ height: '300px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div>
+                    <div className="skeleton skeleton-title" style={{ width: '180px' }}></div>
+                    <div className="skeleton skeleton-text" style={{ width: '100px' }}></div>
+                  </div>
+                  <div className="skeleton" style={{ width: '60px', height: '30px' }}></div>
+                </div>
+                <div className="skeleton" style={{ flex: 1, height: '100%' }}></div>
+              </div>
+            ))}
+          </div>
         ) : activeShares.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-title">No code shared currently</div>
@@ -187,9 +208,7 @@ function ShareCodeContent() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <div>
                     <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-heading)' }}>{item.title}</h4>
-                    <div style={{ fontSize: '0.8rem', color: '#d93025', marginTop: '4px', fontWeight: '600' }}>
-                      Expires in: {getRemainingTime(item.created_at)}
-                    </div>
+                    <ExpiryCountdown createdAtStr={item.created_at} />
                   </div>
                   <button 
                     className="btn btn-danger" 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import { generateNotesPDF } from '@/lib/pdfExport';
@@ -28,18 +28,20 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
     }
   }, []);
 
-  const toggleTheme = () => {
-    const nextTheme = !isDarkMode;
-    setIsDarkMode(nextTheme);
-    localStorage.setItem('theme', nextTheme ? 'dark' : 'light');
-    if (nextTheme) {
-      document.body.classList.add('dark-theme');
-    } else {
-      document.body.classList.remove('dark-theme');
-    }
-  };
+  const toggleTheme = useCallback(() => {
+    setIsDarkMode(prev => {
+      const nextTheme = !prev;
+      localStorage.setItem('theme', nextTheme ? 'dark' : 'light');
+      if (nextTheme) {
+        document.body.classList.add('dark-theme');
+      } else {
+        document.body.classList.remove('dark-theme');
+      }
+      return nextTheme;
+    });
+  }, []);
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = useCallback(async () => {
     setError('');
     try {
       const doc = await generateNotesPDF(setError);
@@ -53,7 +55,7 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
       console.error(err);
       setError('Failed to generate PDF preview.');
     }
-  };
+  }, []);
 
   const handleDownloadPDF = () => {
     if (pdfDoc) {

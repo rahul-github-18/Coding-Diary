@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { todoService } from '@/lib/api';
@@ -110,28 +110,30 @@ function DashboardContent({ searchQuery }) {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  // Filter and search logic
-  const filteredTodos = todos.filter(todo => {
-    // 1. Date Filter
-    if (filter === 'today') {
-      const todayStr = getTodayStr();
-      if (todo.created_date !== todayStr) {
-        return false;
+  // Filter and search logic memoized to prevent unnecessary recalculations on re-render
+  const filteredTodos = useMemo(() => {
+    return todos.filter(todo => {
+      // 1. Date Filter
+      if (filter === 'today') {
+        const todayStr = getTodayStr();
+        if (todo.created_date !== todayStr) {
+          return false;
+        }
       }
-    }
 
-    // 2. Search Filter (Todo title OR Question title)
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchTodoTitle = todo.title.toLowerCase().includes(query);
-      const matchQuestionTitle = todo.questions && todo.questions.some(q => 
-        q.title.toLowerCase().includes(query)
-      );
-      return matchTodoTitle || matchQuestionTitle;
-    }
+      // 2. Search Filter (Todo title OR Question title)
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchTodoTitle = todo.title.toLowerCase().includes(query);
+        const matchQuestionTitle = todo.questions && todo.questions.some(q => 
+          q.title.toLowerCase().includes(query)
+        );
+        return matchTodoTitle || matchQuestionTitle;
+      }
 
-    return true;
-  });
+      return true;
+    });
+  }, [todos, filter, searchQuery]);
 
   if (!authorized) {
     return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Checking authorization...</div>;
@@ -183,7 +185,22 @@ function DashboardContent({ searchQuery }) {
       </form>
 
       {loading ? (
-        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading coding tasks...</div>
+        <div className="todos-grid">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-title"></div>
+              <div className="skeleton skeleton-text"></div>
+              <div className="skeleton skeleton-text short"></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '12px' }}>
+                <div className="skeleton" style={{ width: '80px', height: '24px' }}></div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="skeleton" style={{ width: '50px', height: '24px' }}></div>
+                  <div className="skeleton" style={{ width: '50px', height: '24px' }}></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filteredTodos.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-title">No todos found</div>

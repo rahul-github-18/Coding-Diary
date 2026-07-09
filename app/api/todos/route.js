@@ -4,19 +4,32 @@ import { supabase } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const requestStart = Date.now();
+  console.log('[API GET /api/todos] Start');
   try {
-    const { data: todos, error: todosError } = await supabase
-      .from('todos')
-      .select('id, title, completed, created_date')
-      .order('created_date', { ascending: false })
-      .order('id', { ascending: false });
+    console.time('Supabase Query: Get Todos & Questions');
+    const queryStart = Date.now();
+    
+    // Fetch todos and questions in parallel to eliminate waterfall requests
+    const [todosResult, questionsResult] = await Promise.all([
+      supabase
+        .from('todos')
+        .select('id, title, completed, created_date')
+        .order('created_date', { ascending: false })
+        .order('id', { ascending: false }),
+      supabase
+        .from('questions')
+        .select('id, todo_id, title')
+    ]);
+    
+    console.timeEnd('Supabase Query: Get Todos & Questions');
+    const queryEnd = Date.now();
+    console.log(`[API GET /api/todos] Supabase query execution time: ${queryEnd - queryStart} ms`);
+
+    const { data: todos, error: todosError } = todosResult;
+    const { data: questions, error: questionsError } = questionsResult;
 
     if (todosError) throw todosError;
-
-    const { data: questions, error: questionsError } = await supabase
-      .from('questions')
-      .select('id, todo_id, title');
-
     if (questionsError) throw questionsError;
     
     // Group questions by todo_id
@@ -31,10 +44,13 @@ export async function GET() {
     // Attach questions array to each todo
     const todosWithQuestions = todos.map(todo => ({
       ...todo,
-      // Supabase date fields are returned as 'YYYY-MM-DD' strings, but we format just in case
       created_date: todo.created_date,
       questions: questionsMap[todo.id] || []
     }));
+
+    const requestEnd = Date.now();
+    console.log(`[API GET /api/todos] API execution time: ${requestEnd - requestStart} ms`);
+    console.log(`[API GET /api/todos] Total request time: ${requestEnd - requestStart} ms`);
 
     return NextResponse.json(todosWithQuestions);
   } catch (error) {
@@ -47,6 +63,8 @@ export async function GET() {
 }
 
 export async function POST(req) {
+  const requestStart = Date.now();
+  console.log('[API POST /api/todos] Start');
   try {
     const { title } = await req.json();
 
@@ -54,13 +72,14 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Todo title is required.' }, { status: 400 });
     }
 
-    // Automatically save the current date in YYYY-MM-DD format based on local time
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     const createdDate = `${yyyy}-${mm}-${dd}`;
 
+    console.time('Supabase Query: Create Todo');
+    const queryStart = Date.now();
     const { data: newTodo, error } = await supabase
       .from('todos')
       .insert({
@@ -68,10 +87,17 @@ export async function POST(req) {
         completed: false,
         created_date: createdDate
       })
-      .select()
+      .select('id, title, completed, created_date')
       .single();
+    console.timeEnd('Supabase Query: Create Todo');
+    const queryEnd = Date.now();
+    console.log(`[API POST /api/todos] Supabase query execution time: ${queryEnd - queryStart} ms`);
 
     if (error) throw error;
+
+    const requestEnd = Date.now();
+    console.log(`[API POST /api/todos] API execution time: ${requestEnd - requestStart} ms`);
+    console.log(`[API POST /api/todos] Total request time: ${requestEnd - requestStart} ms`);
 
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
