@@ -76,3 +76,34 @@ export async function PUT(req, { params }) {
     return NextResponse.json({ message: error.message || 'Internal server error.' }, { status: 500 });
   }
 }
+
+export async function DELETE(req, { params }) {
+  const { id } = params;
+  const userId = parseInt(id, 10);
+  const timerLabel = `API: DELETE /api/admin/users/${id}`;
+  console.time(timerLabel);
+  try {
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) {
+      console.timeEnd(timerLabel);
+      return NextResponse.json({ message: 'Access Denied. Admins only.' }, { status: 403 });
+    }
+
+    // Do delete
+    console.time('Supabase: Delete User');
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+    console.timeEnd('Supabase: Delete User');
+
+    if (deleteError) throw deleteError;
+
+    console.timeEnd(timerLabel);
+    return NextResponse.json({ message: 'User deleted successfully.' });
+  } catch (error) {
+    console.error('Admin DELETE user error:', error);
+    console.timeEnd(timerLabel);
+    return NextResponse.json({ message: error.message || 'Internal server error.' }, { status: 500 });
+  }
+}

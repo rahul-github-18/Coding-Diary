@@ -61,6 +61,33 @@ function UserManagementContent() {
     }
   };
 
+  const handleDisapproveUser = async (uId) => {
+    setError('');
+    setSuccess('');
+    try {
+      await userService.disapproveUser(uId);
+      setSuccess('User approval revoked.');
+      fetchUsers();
+    } catch (err) {
+      setError(err.message || 'Failed to revoke user approval.');
+    }
+  };
+
+  const handleDeleteUser = async (uId) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) {
+      return;
+    }
+    setError('');
+    setSuccess('');
+    try {
+      await userService.deleteUser(uId);
+      setSuccess('User deleted successfully.');
+      fetchUsers();
+    } catch (err) {
+      setError(err.message || 'Failed to delete user.');
+    }
+  };
+
   const handleTogglePermission = async (uId, field, currentValue) => {
     setError('');
     setSuccess('');
@@ -109,10 +136,10 @@ function UserManagementContent() {
             &larr; Back to Dashboard
           </button>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-heading)', margin: 0 }}>
-            User Control & Permission Center
+            Role Permissions Configurator
           </h2>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
-            Approve pending enrollments, toggle capability permissions, and allocate roles.
+            Configure client permissions, manage approvals, and allocate roles.
           </p>
         </div>
       </div>
@@ -120,84 +147,108 @@ function UserManagementContent() {
       {error && <div className="login-error">{error}</div>}
       {success && <div className="save-indicator" style={{ marginBottom: '12px' }}>{success}</div>}
 
-      <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
+      <div className="card" style={{ minHeight: 'auto', padding: 0, overflow: 'hidden', border: '1px solid var(--card-border)' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>Loading users list...</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--card-border)', paddingBottom: '12px' }}>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Username</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Role</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Status</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Can View</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Can Edit</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Can Delete</th>
-                  <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'right' }}>Actions</th>
+                <tr style={{ backgroundColor: '#1a73e8', color: '#ffffff' }}>
+                  <th style={{ padding: '14px 16px', color: '#ffffff', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Username</th>
+                  <th style={{ padding: '14px 16px', color: '#ffffff', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Role</th>
+                  <th style={{ padding: '14px 16px', color: '#ffffff', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                  <th style={{ padding: '14px 16px', color: '#ffffff', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Can View</th>
+                  <th style={{ padding: '14px 16px', color: '#ffffff', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Can Edit</th>
+                  <th style={{ padding: '14px 16px', color: '#ffffff', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Can Delete</th>
+                  <th style={{ padding: '14px 16px', color: '#ffffff', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {usersList.map((usr) => (
-                  <tr key={usr.id} style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <td style={{ padding: '12px 8px', fontWeight: '600', color: 'var(--text-heading)' }}>{usr.username}</td>
-                    <td style={{ padding: '12px 8px' }}>
+                  <tr key={usr.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background-color 0.15s ease' }}>
+                    <td style={{ padding: '14px 16px', fontWeight: '600', color: 'var(--text-heading)' }}>{usr.username}</td>
+                    <td style={{ padding: '14px 16px' }}>
                       <select 
                         value={usr.role} 
                         onChange={(e) => handleRoleChange(usr.id, e.target.value)}
                         className="form-input" 
-                        style={{ padding: '4px 8px', width: '90px', fontSize: '0.8rem' }}
+                        style={{ padding: '6px 10px', width: '100px', fontSize: '0.8rem', margin: 0 }}
                         disabled={usr.username === 'admin'}
                       >
                         <option value="user">User</option>
                         <option value="admin">Admin</option>
                       </select>
                     </td>
-                    <td style={{ padding: '12px 8px' }}>
+                    <td style={{ padding: '14px 16px' }}>
                       {usr.approved ? (
-                        <span style={{ fontSize: '0.8rem', padding: '2px 8px', backgroundColor: '#e6f4ea', color: '#137333', borderRadius: '4px', fontWeight: '500' }}>
+                        <span style={{ fontSize: '0.72rem', padding: '4px 10px', backgroundColor: '#e6f4ea', color: '#137333', borderRadius: '4px', fontWeight: '700', textTransform: 'uppercase' }}>
                           Approved
                         </span>
                       ) : (
-                        <span style={{ fontSize: '0.8rem', padding: '2px 8px', backgroundColor: '#fef7e0', color: '#b06000', borderRadius: '4px', fontWeight: '500' }}>
-                          Pending Approval
+                        <span style={{ fontSize: '0.72rem', padding: '4px 10px', backgroundColor: '#fef7e0', color: '#b06000', borderRadius: '4px', fontWeight: '700', textTransform: 'uppercase' }}>
+                          Pending
                         </span>
                       )}
                     </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       <input 
                         type="checkbox" 
                         checked={usr.can_view} 
                         onChange={() => handleTogglePermission(usr.id, 'can_view', usr.can_view)}
                         disabled={usr.username === 'admin'}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                       />
                     </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       <input 
                         type="checkbox" 
                         checked={usr.can_edit} 
                         onChange={() => handleTogglePermission(usr.id, 'can_edit', usr.can_edit)}
                         disabled={usr.username === 'admin'}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                       />
                     </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       <input 
                         type="checkbox" 
                         checked={usr.can_delete} 
                         onChange={() => handleTogglePermission(usr.id, 'can_delete', usr.can_delete)}
                         disabled={usr.username === 'admin'}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                       />
                     </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>
-                      {!usr.approved && (
-                        <button 
-                          className="btn btn-success" 
-                          style={{ padding: '4px 8px', fontSize: '0.75rem' }} 
-                          onClick={() => handleApproveUser(usr.id)}
-                        >
-                          Approve Enrollment
-                        </button>
-                      )}
+                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        {usr.username !== 'admin' && (
+                          <>
+                            {usr.approved ? (
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '5px 10px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: '#fde8e8', color: '#d93025', border: '1px solid #f8b4b4' }} 
+                                onClick={() => handleDisapproveUser(usr.id)}
+                              >
+                                Revoke Approval
+                              </button>
+                            ) : (
+                              <button 
+                                className="btn btn-success" 
+                                style={{ padding: '5px 10px', fontSize: '0.75rem', fontWeight: '600' }} 
+                                onClick={() => handleApproveUser(usr.id)}
+                              >
+                                Approve
+                              </button>
+                            )}
+                            <button 
+                              className="btn btn-danger" 
+                              style={{ padding: '5px 10px', fontSize: '0.75rem', fontWeight: '600' }} 
+                              onClick={() => handleDeleteUser(usr.id)}
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
