@@ -1702,18 +1702,9 @@ function DashboardContent({ searchQuery }) {
                   .filter(id => topics.some(topic => topic.id === id))
               );
 
-              let totalQuestionsInSelected = 0;
-              let completedQuestionsInSelected = 0;
-
-              topics.forEach(topic => {
-                if (selectedTopicIds.has(topic.id)) {
-                  const topicQs = allQuestions.filter(q => q.todo_id === topic.id);
-                  totalQuestionsInSelected += topicQs.length;
-                  completedQuestionsInSelected += topicQs.filter(q => userTasks.some(t => t.item_type === 'question' && t.item_id === q.id && t.status === 'Completed')).length;
-                }
-              });
-
-              const pendingQuestionsInSelected = totalQuestionsInSelected - completedQuestionsInSelected;
+              const totalTopicsCount = selectedTopicIds.size;
+              const completedTopicsCount = computedStats.completedTopicsCount;
+              const pendingTopicsCount = totalTopicsCount - completedTopicsCount;
 
               return (
                 <>
@@ -1735,10 +1726,10 @@ function DashboardContent({ searchQuery }) {
                   >
                     <div>
                       <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Completed Questions
+                        Completed Topics
                       </span>
                       <h3 style={{ fontSize: '2rem', fontWeight: '900', color: '#137333', marginTop: '12px', marginBottom: '8px' }}>
-                        {completedQuestionsInSelected}
+                        {completedTopicsCount}
                       </h3>
                     </div>
                     <span style={{ fontSize: '0.75rem', color: '#137333', fontWeight: '600' }}>
@@ -1764,10 +1755,10 @@ function DashboardContent({ searchQuery }) {
                   >
                     <div>
                       <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Pending Questions
+                        Pending Topics
                       </span>
                       <h3 style={{ fontSize: '2rem', fontWeight: '900', color: '#b06000', marginTop: '12px', marginBottom: '8px' }}>
-                        {pendingQuestionsInSelected}
+                        {pendingTopicsCount}
                       </h3>
                     </div>
                     <span style={{ fontSize: '0.75rem', color: '#b06000', fontWeight: '600' }}>
