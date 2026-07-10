@@ -1533,22 +1533,20 @@ function DashboardContent({ searchQuery }) {
                                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '12px', textAlign: 'center' }}>
                                   {isExpanded ? '▼' : '▶'}
                                 </span>
-                                <span style={{ fontSize: '0.65rem', padding: '2px 6px', backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '4px', textTransform: 'uppercase', fontWeight: '600', color: 'var(--text-muted)' }}>
-                                  question
+                                <span style={{ 
+                                  fontSize: '0.65rem', 
+                                  padding: '2.5px 7px', 
+                                  borderRadius: '4px', 
+                                  textTransform: 'uppercase', 
+                                  fontWeight: '700',
+                                  backgroundColor: q.difficulty === 'Advanced' ? '#fde8e8' : q.difficulty === 'Intermediate' ? '#fef3c7' : '#e6f4ea',
+                                  color: q.difficulty === 'Advanced' ? '#d93025' : q.difficulty === 'Intermediate' ? '#b06000' : '#137333',
+                                  border: '1px solid ' + (q.difficulty === 'Advanced' ? '#f8b4b4' : q.difficulty === 'Intermediate' ? '#fcd34d' : '#ceead6')
+                                }}>
+                                  {q.difficulty}
                                 </span>
                                 <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-heading)' }}>
                                   {q.title}
-                                </span>
-                                <span style={{ 
-                                  fontSize: '0.7rem', 
-                                  fontWeight: '600', 
-                                  padding: '2px 6px', 
-                                  borderRadius: '4px',
-                                  backgroundColor: q.difficulty === 'Advanced' ? '#fde8e8' : q.difficulty === 'Intermediate' ? '#fef3c7' : '#e6f4ea',
-                                  color: q.difficulty === 'Advanced' ? '#d93025' : q.difficulty === 'Intermediate' ? '#b06000' : '#137333',
-                                  marginLeft: '4px'
-                                }}>
-                                  {q.difficulty}
                                 </span>
                               </div>
                               
