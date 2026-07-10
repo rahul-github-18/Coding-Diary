@@ -1,6 +1,16 @@
 -- Supabase SQL Database Migration Schema
 -- Use this file to manually run migration queries in your Supabase SQL Editor.
 
+-- NOTE: If your Supabase tables are rejecting updates/deletions silently,
+-- run these statements in your Supabase SQL Editor to disable Row Level Security (RLS):
+-- ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE todos DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE questions DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE code_examples DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE notes DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE user_tasks DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE shared_codes DISABLE ROW LEVEL SECURITY;
+
 -- 1. Create users table
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,

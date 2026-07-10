@@ -58,18 +58,24 @@ export async function PUT(req, { params }) {
 
     // Do update
     console.time('Supabase: Update User detail');
-    const { data: updatedUser, error: updateError } = await supabase
+    const { data: updatedUsers, error: updateError } = await supabase
       .from('users')
       .update(updateData)
       .eq('id', userId)
-      .select('id, username, role, approved, can_view, can_edit, can_delete')
-      .single();
+      .select('id, username, role, approved, can_view, can_edit, can_delete');
     console.timeEnd('Supabase: Update User detail');
 
     if (updateError) throw updateError;
 
+    if (!updatedUsers || updatedUsers.length === 0) {
+      console.timeEnd(timerLabel);
+      return NextResponse.json({ 
+        message: 'Could not update user. RLS policies on Supabase may be blocking writes. Run: ALTER TABLE users DISABLE ROW LEVEL SECURITY; in your Supabase SQL editor.' 
+      }, { status: 400 });
+    }
+
     console.timeEnd(timerLabel);
-    return NextResponse.json(updatedUser);
+    return NextResponse.json(updatedUsers[0]);
   } catch (error) {
     console.error('Admin PUT user error:', error);
     console.timeEnd(timerLabel);
@@ -91,13 +97,21 @@ export async function DELETE(req, { params }) {
 
     // Do delete
     console.time('Supabase: Delete User');
-    const { error: deleteError } = await supabase
+    const { data: deletedRows, error: deleteError } = await supabase
       .from('users')
       .delete()
-      .eq('id', userId);
+      .eq('id', userId)
+      .select('id');
     console.timeEnd('Supabase: Delete User');
 
     if (deleteError) throw deleteError;
+
+    if (!deletedRows || deletedRows.length === 0) {
+      console.timeEnd(timerLabel);
+      return NextResponse.json({ 
+        message: 'Could not delete user. RLS policies on Supabase may be blocking writes. Run: ALTER TABLE users DISABLE ROW LEVEL SECURITY; in your Supabase SQL editor.' 
+      }, { status: 400 });
+    }
 
     console.timeEnd(timerLabel);
     return NextResponse.json({ message: 'User deleted successfully.' });

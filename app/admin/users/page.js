@@ -65,7 +65,7 @@ function UserManagementContent() {
     try {
       await userService.approveUser(uId);
       setSuccess('User enrollment approved!');
-      fetchUsers();
+      await fetchUsers();
     } catch (err) {
       setError(err.message || 'Failed to approve user.');
     }
@@ -77,7 +77,7 @@ function UserManagementContent() {
     try {
       await userService.disapproveUser(uId);
       setSuccess('User approval revoked.');
-      fetchUsers();
+      await fetchUsers();
     } catch (err) {
       setError(err.message || 'Failed to revoke user approval.');
     }
@@ -102,7 +102,7 @@ function UserManagementContent() {
         setSelectedUserId(null);
       }
       
-      fetchUsers();
+      await fetchUsers();
     } catch (err) {
       setError(err.message || 'Failed to delete user.');
     }
@@ -144,6 +144,8 @@ function UserManagementContent() {
     return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Checking authorization...</div>;
   }
 
+  const pendingUsers = usersList.filter(u => !u.approved && u.username !== 'admin');
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -166,6 +168,66 @@ function UserManagementContent() {
 
       {error && <div className="login-error">{error}</div>}
       {success && <div className="save-indicator" style={{ marginBottom: '12px' }}>{success}</div>}
+
+      {/* Pending Enrollments Notification Section */}
+      {pendingUsers.length > 0 && (
+        <div style={{
+          backgroundColor: 'var(--btn-secondary-bg)',
+          borderLeft: '4px solid #b06000',
+          padding: '16px 20px',
+          borderRadius: '6px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.2rem' }}>🔔</span>
+            <span style={{ fontWeight: '800', color: 'var(--text-heading)', fontSize: '1.05rem' }}>
+              Pending Enrollments Approval Required ({pendingUsers.length})
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {pendingUsers.map(usr => (
+              <div 
+                key={usr.id} 
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  padding: '10px 14px', 
+                  backgroundColor: 'var(--list-item-bg)', 
+                  borderRadius: '6px',
+                  border: '1px solid var(--card-border)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontWeight: '700', color: 'var(--text-heading)' }}>{usr.username}</span>
+                  <span style={{ fontSize: '0.75rem', padding: '2px 6px', backgroundColor: '#fef7e0', color: '#b06000', borderRadius: '4px', fontWeight: '600' }}>
+                    PENDING APPROVAL
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn btn-success" 
+                    style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: '600' }}
+                    onClick={() => handleApproveUser(usr.id)}
+                  >
+                    Approve
+                  </button>
+                  <button 
+                    className="btn btn-danger" 
+                    style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: '600' }}
+                    onClick={() => handleDeleteUser(usr.id)}
+                  >
+                    Delete / Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Operator Details & Quick Action Panel */}
       <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', minHeight: 'auto' }}>
