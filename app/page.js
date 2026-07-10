@@ -5,6 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { todoService, userService, taskService, questionService } from '@/lib/api';
 
+const getDisplayDifficulty = (difficulty) => {
+  if (!difficulty) return 'Easy';
+  const d = String(difficulty).toLowerCase();
+  if (d.includes('beg') || d.includes('easy')) return 'Easy';
+  if (d.includes('int') || d.includes('mid') || d.includes('med')) return 'Medium';
+  if (d.includes('adv') || d.includes('hard')) return 'Hard';
+  return 'Easy';
+};
+
 function DashboardContent({ searchQuery }) {
   const [user, setUser] = useState(null);
   const [topics, setTopics] = useState([]);
@@ -1203,8 +1212,8 @@ function DashboardContent({ searchQuery }) {
                     <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)' }}>
                       {topic.category}
                     </span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '500', color: topic.difficulty === 'Hard' ? '#d93025' : topic.difficulty === 'Medium' ? '#b06000' : '#137333' }}>
-                      {topic.difficulty}
+                    <span style={{ fontSize: '0.75rem', fontWeight: '500', color: getDisplayDifficulty(topic.difficulty) === 'Hard' ? '#d93025' : getDisplayDifficulty(topic.difficulty) === 'Medium' ? '#b06000' : '#137333' }}>
+                      {getDisplayDifficulty(topic.difficulty)}
                     </span>
                   </div>
                   <h4 className="card-title" onClick={() => router.push(`/todo/${topic.id}`)}>
@@ -1353,8 +1362,8 @@ function DashboardContent({ searchQuery }) {
                         <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                           {activeGroup.category}
                         </span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: '500', color: activeGroup.difficulty === 'Hard' ? '#d93025' : activeGroup.difficulty === 'Medium' ? '#b06000' : '#137333' }}>
-                          {activeGroup.difficulty}
+                        <span style={{ fontSize: '0.75rem', fontWeight: '500', color: getDisplayDifficulty(activeGroup.difficulty) === 'Hard' ? '#d93025' : getDisplayDifficulty(activeGroup.difficulty) === 'Medium' ? '#b06000' : '#137333' }}>
+                          {getDisplayDifficulty(activeGroup.difficulty)}
                         </span>
                       </div>
                       <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: 'var(--text-heading)', margin: 0 }}>
@@ -1541,11 +1550,11 @@ function DashboardContent({ searchQuery }) {
                                   borderRadius: '4px', 
                                   textTransform: 'uppercase', 
                                   fontWeight: '700',
-                                  backgroundColor: q.difficulty === 'Hard' ? '#fde8e8' : q.difficulty === 'Medium' ? '#fef3c7' : '#e6f4ea',
-                                  color: q.difficulty === 'Hard' ? '#d93025' : q.difficulty === 'Medium' ? '#b06000' : '#137333',
-                                  border: '1px solid ' + (q.difficulty === 'Hard' ? '#f8b4b4' : q.difficulty === 'Medium' ? '#fcd34d' : '#ceead6')
+                                  backgroundColor: getDisplayDifficulty(q.difficulty) === 'Hard' ? '#fde8e8' : getDisplayDifficulty(q.difficulty) === 'Medium' ? '#fef3c7' : '#e6f4ea',
+                                  color: getDisplayDifficulty(q.difficulty) === 'Hard' ? '#d93025' : getDisplayDifficulty(q.difficulty) === 'Medium' ? '#b06000' : '#137333',
+                                  border: '1px solid ' + (getDisplayDifficulty(q.difficulty) === 'Hard' ? '#f8b4b4' : getDisplayDifficulty(q.difficulty) === 'Medium' ? '#fcd34d' : '#ceead6')
                                 }}>
-                                  {q.difficulty}
+                                  {getDisplayDifficulty(q.difficulty)}
                                 </span>
                                 <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-heading)' }}>
                                   {q.title}
@@ -1887,8 +1896,8 @@ function DashboardContent({ searchQuery }) {
                             <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)' }}>
                               {topic.category}
                             </span>
-                            <span style={{ fontSize: '0.75rem', fontWeight: '500', color: topic.difficulty === 'Hard' ? '#d93025' : topic.difficulty === 'Medium' ? '#b06000' : '#137333' }}>
-                              {topic.difficulty}
+                            <span style={{ fontSize: '0.75rem', fontWeight: '500', color: getDisplayDifficulty(topic.difficulty) === 'Hard' ? '#d93025' : getDisplayDifficulty(topic.difficulty) === 'Medium' ? '#b06000' : '#137333' }}>
+                              {getDisplayDifficulty(topic.difficulty)}
                             </span>
                           </div>
                           <h4 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-heading)' }}>
