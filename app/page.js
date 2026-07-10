@@ -70,7 +70,7 @@ function DashboardContent({ searchQuery }) {
         router.replace('/login');
       }
     }
-  }, [router, filter]);
+  }, [router, filter, searchParams]);
 
   const loadDashboardData = async (u) => {
     setLoading(true);
@@ -96,7 +96,10 @@ function DashboardContent({ searchQuery }) {
       console.timeEnd('API: Parallel Fetch Dashboard Data');
 
       setTopics(allTopics || []);
-      if (allTopics && allTopics.length > 0) {
+      const topicIdParam = searchParams.get('topicId');
+      if (topicIdParam) {
+        setSelectedTopicId(parseInt(topicIdParam, 10));
+      } else if (allTopics && allTopics.length > 0) {
         setSelectedTopicId(prev => prev || allTopics[0].id);
       }
       setUserTasks(tasks || []);
@@ -898,6 +901,104 @@ function DashboardContent({ searchQuery }) {
     });
   }, [topics, searchQuery]);
 
+  const handleToggleTopicSelection = async (topicId) => {
+    if (user && !user.approved && user.role !== 'admin') {
+      setError('Your account is pending admin approval.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+    
+    const existingTask = userTasks.find(t => t.item_type === 'topic' && t.item_id === topicId);
+    
+    try {
+      if (existingTask) {
+        await taskService.removeTask(existingTask.id);
+        setSuccess('Topic removed from progress.');
+      } else {
+        await taskService.addTask('topic', topicId, 'In Progress');
+        setSuccess('Topic added to progress.');
+      }
+      loadDashboardData(user);
+    } catch (err) {
+      setError('Failed to update topic selection.');
+    }
+  };
+
+  const handleToggleQuestionCompletion = async (questionId) => {
+    if (user && !user.approved && user.role !== 'admin') {
+      setError('Your account is pending admin approval.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+
+    const existingTask = userTasks.find(t => t.item_type === 'question' && t.item_id === questionId);
+
+    try {
+      if (existingTask) {
+        if (existingTask.status === 'Completed') {
+          await taskService.removeTask(existingTask.id);
+        } else {
+          await taskService.updateTask(existingTask.id, { status: 'Completed' });
+        }
+      } else {
+        await taskService.addTask('question', questionId, 'Completed');
+      }
+      loadDashboardData(user);
+    } catch (err) {
+      setError('Failed to update question completion.');
+    }
+  };
+
+  const computedStats = useMemo(() => {
+    const selectedTopicIds = new Set(
+      userTasks.filter(t => t.item_type === 'topic').map(t => t.item_id)
+    );
+
+    if (selectedTopicIds.size === 0) {
+      return {
+        completedTasksCount: 0,
+        completedTopicsCount: 0,
+        totalTopicsCount: 0,
+        learningPercentage: 0
+      };
+    }
+
+    const completedQuestionIds = new Set(
+      userTasks.filter(t => t.item_type === 'question' && t.status === 'Completed').map(t => t.item_id)
+    );
+
+    let totalQuestionsInSelected = 0;
+    let completedQuestionsInSelected = 0;
+    let completedTopicsCount = 0;
+
+    topics.forEach(topic => {
+      if (selectedTopicIds.has(topic.id)) {
+        const topicQs = allQuestions.filter(q => q.todo_id === topic.id);
+        totalQuestionsInSelected += topicQs.length;
+        
+        const completedQs = topicQs.filter(q => completedQuestionIds.has(q.id));
+        completedQuestionsInSelected += completedQs.length;
+
+        if (topicQs.length > 0 && completedQs.length === topicQs.length) {
+          completedTopicsCount++;
+        }
+      }
+    });
+
+    const totalTasksCount = totalQuestionsInSelected;
+    const completedTasksCount = completedQuestionsInSelected;
+    const learningPercentage = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+    return {
+      completedTasksCount,
+      completedTopicsCount,
+      totalTopicsCount: selectedTopicIds.size,
+      learningPercentage
+    };
+  }, [topics, allQuestions, userTasks]);
+
   const renderTasks = useMemo(() => {
     if (filter === 'today') {
       return userTasks.filter(t => t.status !== 'Completed').map(t => ({
@@ -1097,30 +1198,10 @@ function DashboardContent({ searchQuery }) {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
       {/* Welcome Banner */}
-      <div className="card" style={{ minHeight: 'auto', padding: '24px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: 'none', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: '800', margin: 0, color: '#ffffff' }}>
-            {user.role === 'admin' ? 'Admin workspace' : `Welcome, ${user.username}!`}
-          </h2>
-          <p style={{ fontSize: '0.95rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
-            Ready to tackle your coding tasks today? Keep up the good work!
-          </p>
-        </div>
-        
-        {/* Streak details */}
-        {filter !== 'all' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: 'rgba(255,255,255,0.07)', padding: '12px 18px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <span style={{ fontSize: '1.75rem' }}>🔥</span>
-            <div>
-              <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#ffedd5', lineHeight: '1.2' }}>
-                {userStats.streak} Days
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Learning Streak
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="card" style={{ minHeight: 'auto', padding: '24px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: 'none', color: '#ffffff', display: 'flex', alignItems: 'center' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: '800', margin: 0, color: '#ffffff' }}>
+          Welcome, {user.username}!
+        </h2>
       </div>
 
       {user.role !== 'admin' && !user.approved && (
@@ -1325,31 +1406,56 @@ function DashboardContent({ searchQuery }) {
                                 </span>
                               </div>
                               
-                              {user?.role === 'admin' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <button
-                                    className="btn btn-secondary"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditingQuestion(q);
-                                      setActiveForm('editQuestion');
-                                    }}
-                                    style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: '600' }}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    className="btn btn-danger"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteQuestion(q.id);
-                                    }}
-                                    style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: '600' }}
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {/* Completed Button */}
+                                <button
+                                  className="btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleQuestionCompletion(q.id);
+                                  }}
+                                  style={{
+                                    padding: '4px 10px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    backgroundColor: userTasks.some(t => t.item_type === 'question' && t.item_id === q.id && t.status === 'Completed') 
+                                      ? '#e6f4ea' 
+                                      : 'var(--btn-secondary-bg)',
+                                    color: userTasks.some(t => t.item_type === 'question' && t.item_id === q.id && t.status === 'Completed')
+                                      ? '#137333'
+                                      : 'var(--text-color)',
+                                    border: '1px solid ' + (userTasks.some(t => t.item_type === 'question' && t.item_id === q.id && t.status === 'Completed') ? '#ceead6' : 'var(--card-border)')
+                                  }}
+                                >
+                                  {userTasks.some(t => t.item_type === 'question' && t.item_id === q.id && t.status === 'Completed') ? '✓ Completed' : 'Completed'}
+                                </button>
+
+                                {user?.role === 'admin' && (
+                                  <>
+                                    <button
+                                      className="btn btn-secondary"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingQuestion(q);
+                                        setActiveForm('editQuestion');
+                                      }}
+                                      style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: '600' }}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      className="btn btn-danger"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteQuestion(q.id);
+                                      }}
+                                      style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: '600' }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </div>
 
                             {/* Collapsible Details Body */}
@@ -1460,23 +1566,23 @@ function DashboardContent({ searchQuery }) {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
               <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${userStats.learningPercentage}%`, height: '100%', backgroundColor: '#1a73e8', borderRadius: '4px', transition: 'width 0.5s ease-in-out' }}></div>
+                <div style={{ width: `${computedStats.learningPercentage}%`, height: '100%', backgroundColor: '#1a73e8', borderRadius: '4px', transition: 'width 0.5s ease-in-out' }}></div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Learning Progress</span>
-                <span style={{ fontWeight: '700', color: 'var(--link-color)' }}>{userStats.learningPercentage}%</span>
+                <span style={{ fontWeight: '700', color: 'var(--link-color)' }}>{computedStats.learningPercentage}%</span>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid var(--card-border)', paddingTop: '16px' }}>
               <div style={{ fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Completed Topics: </span>
                 <span style={{ fontWeight: '600', color: 'var(--text-heading)' }}>
-                  {userStats.completedTopicsCount} / {userStats.totalTopicsCount}
+                  {computedStats.completedTopicsCount} / {computedStats.totalTopicsCount}
                 </span>
               </div>
               <div style={{ fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Completed Tasks: </span>
-                <span style={{ fontWeight: '600', color: 'var(--text-heading)' }}>{userStats.completedTasksCount}</span>
+                <span style={{ color: 'var(--text-muted)' }}>Completed Questions: </span>
+                <span style={{ fontWeight: '600', color: 'var(--text-heading)' }}>{computedStats.completedTasksCount}</span>
               </div>
             </div>
           </div>
@@ -1487,52 +1593,60 @@ function DashboardContent({ searchQuery }) {
               Explore Curriculum Topics
             </h3>
             <div className="todos-grid">
-              {filteredTopics.slice(0, 3).map((topic) => (
-                <div key={topic.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)' }}>
-                        {topic.category}
-                      </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '500', color: topic.difficulty === 'Advanced' ? '#d93025' : topic.difficulty === 'Intermediate' ? '#b06000' : '#137333' }}>
-                        {topic.difficulty}
-                      </span>
-                    </div>
-                    <h4 className="card-title" onClick={() => router.push(`/todo/${topic.id}`)}>
-                      {topic.title}
-                    </h4>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Est. Time: {topic.estimated_time}</span>
-                    </div>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-                      <div style={{ flex: 1, height: '4px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '2px', overflow: 'hidden' }}>
-                        <div style={{ width: `${topic.progress_percentage || 0}%`, height: '100%', backgroundColor: '#137333' }}></div>
+              {filteredTopics.map((topic) => {
+                const topicQs = allQuestions.filter(q => q.todo_id === topic.id);
+                const completedQCount = topicQs.filter(q => userTasks.some(t => t.item_type === 'question' && t.item_id === q.id && t.status === 'Completed')).length;
+                const progressPercent = topicQs.length > 0 ? Math.round((completedQCount / topicQs.length) * 100) : 0;
+
+                return (
+                  <div key={topic.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                          {topic.category}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '500', color: topic.difficulty === 'Advanced' ? '#d93025' : topic.difficulty === 'Intermediate' ? '#b06000' : '#137333' }}>
+                          {topic.difficulty}
+                        </span>
                       </div>
-                      <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)' }}>{topic.progress_percentage || 0}%</span>
+                      <h4 className="card-title" style={{ cursor: 'pointer' }} onClick={() => router.push(`/?filter=all&topicId=${topic.id}`)}>
+                        {topic.title}
+                      </h4>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Est. Time: {topic.estimated_time}</span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                        <div style={{ flex: 1, height: '4px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: '#137333' }}></div>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)' }}>{progressPercent}%</span>
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '12px', marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ 
+                          padding: '4px 8px', 
+                          fontSize: '0.75rem',
+                          backgroundColor: userTasks.some(t => t.item_type === 'topic' && t.item_id === topic.id) ? '#e8f0fe' : 'var(--btn-secondary-bg)',
+                          color: userTasks.some(t => t.item_type === 'topic' && t.item_id === topic.id) ? '#1a73e8' : 'var(--text-color)',
+                          border: '1px solid ' + (userTasks.some(t => t.item_type === 'topic' && t.item_id === topic.id) ? '#d2e3fc' : 'var(--card-border)')
+                        }} 
+                        onClick={() => handleToggleTopicSelection(topic.id)}
+                        disabled={!user.approved && user.role !== 'admin'}
+                      >
+                        {userTasks.some(t => t.item_type === 'topic' && t.item_id === topic.id) ? '✓ Selected' : '+ Select Topic'}
+                      </button>
+                      <button className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => router.push(`/?filter=all&topicId=${topic.id}`)}>
+                        Study Topic &rarr;
+                      </button>
                     </div>
                   </div>
-
-                  <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '12px', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <button className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => router.push(`/todo/${topic.id}`)}>
-                      Study Topic &rarr;
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-
-            {filteredTopics.length > 3 && (
-              <div style={{ textAlign: 'center', marginTop: '24px' }}>
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => router.push('/?filter=all')}
-                  style={{ padding: '8px 16px', fontSize: '0.85rem', fontWeight: '600' }}
-                >
-                  View All Curriculum Topics ({filteredTopics.length}) &rarr;
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
