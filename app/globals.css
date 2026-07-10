@@ -603,15 +603,38 @@ body {
 
 @media (max-width: 768px) {
   .app-container {
-    flex-direction: column;
+    flex-direction: row;
+    position: relative;
   }
   .sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--sidebar-border);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    border-right: 1px solid var(--sidebar-border);
+    border-bottom: none;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .sidebar-close-btn {
+    display: block !important;
+  }
+  .hamburger-btn {
+    display: flex !important;
+  }
+  .sidebar-backdrop {
+    display: block !important;
   }
   .main-content {
     padding: 16px;
+    width: 100%;
   }
   .modal-box {
     width: 95%;

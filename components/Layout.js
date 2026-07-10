@@ -11,6 +11,7 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
 
   // Theme State
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // PDF Preview States
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
@@ -112,15 +113,57 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
         </div>
       )}
 
+      {isSidebarOpen && (
+        <div 
+          className="sidebar-backdrop" 
+          onClick={() => setIsSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 990,
+            display: 'none' // Shown only on mobile in CSS
+          }}
+        />
+      )}
+
       <Sidebar 
         onExportPDF={handleExportPDF} 
         isDarkMode={isDarkMode} 
         toggleTheme={toggleTheme} 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
       <div className="main-content">
         <header className="header">
-          <div className="header-left">
+          <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button 
+              className="hamburger-btn" 
+              onClick={() => setIsSidebarOpen(true)}
+              aria-label="Open navigation menu"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-heading)',
+                cursor: 'pointer',
+                display: 'none',
+                padding: '4px',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <img 
                 src="/logo.png" 

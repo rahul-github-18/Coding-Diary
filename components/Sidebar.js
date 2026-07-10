@@ -3,7 +3,7 @@
 import React, { memo, useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
-const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme }) => {
+const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme, isOpen, onClose }) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -64,6 +64,7 @@ const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme }) => {
   };
 
   const handleLogout = () => {
+    if (onClose) onClose();
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('userId');
@@ -71,6 +72,7 @@ const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme }) => {
   };
 
   const handleNavigate = (path, filterVal = null) => {
+    if (onClose) onClose();
     if (filterVal) {
       router.push(`${path}?filter=${filterVal}`);
     } else {
@@ -79,14 +81,32 @@ const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme }) => {
   };
 
   return (
-    <div className="sidebar">
-      <div className="sidebar-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '16px 20px', textDecoration: 'none' }}>
-        <img 
-          src="/logo.png" 
-          alt="CodeDiary Logo" 
-          style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '6px' }} 
-        />
-        <span style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-heading)' }}>CodeDiary</span>
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <div className="sidebar-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', textDecoration: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img 
+            src="/logo.png" 
+            alt="CodeDiary Logo" 
+            style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '6px' }} 
+          />
+          <span style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-heading)' }}>CodeDiary</span>
+        </div>
+        <button 
+          onClick={onClose}
+          className="sidebar-close-btn"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            display: 'none',
+            lineHeight: 1,
+            padding: '4px'
+          }}
+        >
+          &times;
+        </button>
       </div>
       <ul className="sidebar-menu">
         <li>
