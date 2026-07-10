@@ -1425,15 +1425,6 @@ function DashboardContent({ searchQuery }) {
                         </svg>
                         Export Topic
                       </button>
-                      {user?.role === 'admin' && (
-                        <button
-                          className="btn btn-primary"
-                          style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: '600' }}
-                          onClick={() => router.push(`/todo/${activeGroup.id}`)}
-                        >
-                          Study Topic &rarr;
-                        </button>
-                      )}
                     </div>
                   </div>
 
@@ -1913,12 +1904,6 @@ function DashboardContent({ searchQuery }) {
                             </div>
                             <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)' }}>{progressPercent}%</span>
                           </div>
-                        </div>
-
-                        <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '12px', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <button className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => router.push(`/?filter=all&topicId=${topic.id}`)}>
-                            Study Topic &rarr;
-                          </button>
                         </div>
                       </div>
                     );
