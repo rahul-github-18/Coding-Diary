@@ -10,7 +10,7 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
-  
+
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
@@ -45,8 +45,8 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
   }, []);
 
   useEffect(() => {
-    const isStandalone = 
-      (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) || 
+    const isStandalone =
+      (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) ||
       (typeof window !== 'undefined' && window.navigator.standalone === true);
 
     if (isStandalone) {
@@ -146,25 +146,25 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
   return (
     <div className="app-container">
       {error && (
-        <div 
-          className="login-error" 
-          style={{ 
-            position: 'fixed', 
-            top: '20px', 
-            right: '20px', 
-            zIndex: 1100, 
+        <div
+          className="login-error"
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 1100,
             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
             margin: 0
           }}
         >
           {error}
-          <button 
-            onClick={() => setError('')} 
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              marginLeft: '12px', 
-              color: 'inherit', 
+          <button
+            onClick={() => setError('')}
+            style={{
+              background: 'none',
+              border: 'none',
+              marginLeft: '12px',
+              color: 'inherit',
               cursor: 'pointer',
               fontWeight: 'bold'
             }}
@@ -175,8 +175,8 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
       )}
 
       {isSidebarOpen && (
-        <div 
-          className="sidebar-backdrop" 
+        <div
+          className="sidebar-backdrop"
           onClick={() => setIsSidebarOpen(false)}
           style={{
             position: 'fixed',
@@ -192,10 +192,10 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
         />
       )}
 
-      <Sidebar 
-        onExportPDF={handleExportPDF} 
-        isDarkMode={isDarkMode} 
-        toggleTheme={toggleTheme} 
+      <Sidebar
+        onExportPDF={handleExportPDF}
+        isDarkMode={isDarkMode}
+        toggleTheme={toggleTheme}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
@@ -203,8 +203,8 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
       <div className="main-content">
         <header className="header">
           <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button 
-              className="hamburger-btn" 
+            <button
+              className="hamburger-btn"
               onClick={() => setIsSidebarOpen(true)}
               aria-label="Open navigation menu"
               style={{
@@ -226,10 +226,10 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <img 
-                src="/logo.png" 
-                alt="CodeDiary Logo" 
-                style={{ width: '32px', height: '32px', objectFit: 'contain', borderRadius: '6px' }} 
+              <img
+                src="/logo.png"
+                alt="CodeDiary Logo"
+                style={{ width: '32px', height: '32px', objectFit: 'contain', borderRadius: '6px' }}
               />
               <h1 className="header-title" style={{ fontSize: '1.5rem', margin: 0 }}>CodeDiary</h1>
             </div>
@@ -309,8 +309,8 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
             {/* Desktop Actions */}
             <div className="desktop-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {showInstallBtn && (
-                <button 
-                  className="btn btn-secondary" 
+                <button
+                  className="btn btn-secondary"
                   onClick={handleInstallClick}
                   style={{
                     display: 'flex',
@@ -330,8 +330,8 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
                 </button>
               )}
 
-              <button 
-                className="btn btn-secondary" 
+              <button
+                className="btn btn-secondary"
                 onClick={toggleTheme}
                 style={{
                   display: 'flex',
@@ -391,9 +391,9 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
             textAlign: 'center'
           }}>
             <span>Made with ❤️ for learners by <strong>Rahul Ranjan</strong></span>
-            <a 
-              href="https://www.linkedin.com/in/rahul-ranjan-9630632b7/" 
-              target="_blank" 
+            <a
+              href="https://www.linkedin.com/in/rahul-ranjan-6b2ab424a/"
+              target="_blank"
               rel="noopener noreferrer"
               style={{
                 display: 'inline-flex',
@@ -413,7 +413,7 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
               onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
               </svg>
               LinkedIn
             </a>
@@ -424,16 +424,16 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
       {/* PDF Export Preview Modal */}
       {pdfPreviewUrl && (
         <div className="modal-overlay" onClick={handleClosePDFPreview}>
-          <div 
-            className="modal-box" 
-            style={{ maxWidth: '850px', height: '85vh' }} 
+          <div
+            className="modal-box"
+            style={{ maxWidth: '850px', height: '85vh' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="modal-header">
               <span className="modal-title">PDF Export Preview</span>
-              <button 
-                className="btn btn-secondary" 
+              <button
+                className="btn btn-secondary"
                 style={{ padding: '6px 12px', fontSize: '0.8rem' }}
                 onClick={handleClosePDFPreview}
               >
@@ -443,11 +443,11 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
 
             {/* Modal Body */}
             <div className="modal-body" style={{ padding: 0 }}>
-              <iframe 
-                src={pdfPreviewUrl} 
-                width="100%" 
-                height="100%" 
-                title="PDF Preview" 
+              <iframe
+                src={pdfPreviewUrl}
+                width="100%"
+                height="100%"
+                title="PDF Preview"
                 style={{ border: 'none' }}
               />
             </div>
