@@ -43,6 +43,7 @@ function DashboardContent({ searchQuery }) {
   const [expandedQuestionId, setExpandedQuestionId] = useState(null);
   const [questionUploadMode, setQuestionUploadMode] = useState('manual');
   const [questionFilter, setQuestionFilter] = useState('all');
+  const [dashboardFilter, setDashboardFilter] = useState('all');
   const [newQuestionForm, setNewQuestionForm] = useState({
     title: '',
     difficulty: 'Beginner',
@@ -65,6 +66,8 @@ function DashboardContent({ searchQuery }) {
       try {
         const u = JSON.parse(localStorage.getItem('currentUser'));
         setUser(u);
+        setQuestionFilter('all');
+        setDashboardFilter('all');
         loadDashboardData(u);
       } catch (e) {
         localStorage.clear();
@@ -1661,43 +1664,140 @@ function DashboardContent({ searchQuery }) {
         /* Default Home Dashboard - explore curriculum and general progress */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          {/* Stats Card */}
-          <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-heading)' }}>
-              Overall Progress
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
-              <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${computedStats.learningPercentage}%`, height: '100%', backgroundColor: '#1a73e8', borderRadius: '4px', transition: 'width 0.5s ease-in-out' }}></div>
+          {/* Stats & KPIs Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', alignItems: 'stretch' }}>
+            
+            {/* Stats Card */}
+            <div className="card" style={{ minHeight: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-heading)' }}>
+                  Overall Progress
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${computedStats.learningPercentage}%`, height: '100%', backgroundColor: '#1a73e8', borderRadius: '4px', transition: 'width 0.5s ease-in-out' }}></div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Learning Progress</span>
+                    <span style={{ fontWeight: '700', color: 'var(--link-color)' }}>{computedStats.learningPercentage}%</span>
+                  </div>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Learning Progress</span>
-                <span style={{ fontWeight: '700', color: 'var(--link-color)' }}>{computedStats.learningPercentage}%</span>
+              <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid var(--card-border)', paddingTop: '16px' }}>
+                <div style={{ fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Completed Topics: </span>
+                  <span style={{ fontWeight: '600', color: 'var(--text-heading)' }}>
+                    {computedStats.completedTopicsCount} / {computedStats.totalTopicsCount}
+                  </span>
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid var(--card-border)', paddingTop: '16px' }}>
-              <div style={{ fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Completed Topics: </span>
-                <span style={{ fontWeight: '600', color: 'var(--text-heading)' }}>
-                  {computedStats.completedTopicsCount} / {computedStats.totalTopicsCount}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Completed Questions: </span>
-                <span style={{ fontWeight: '600', color: 'var(--text-heading)' }}>{computedStats.completedTasksCount}</span>
-              </div>
-            </div>
+
+            {/* Completed Questions KPI Card */}
+            {(() => {
+              const selectedTopicIds = new Set(
+                userTasks
+                  .filter(t => t.item_type === 'topic')
+                  .map(t => t.item_id)
+                  .filter(id => topics.some(topic => topic.id === id))
+              );
+
+              let totalQuestionsInSelected = 0;
+              let completedQuestionsInSelected = 0;
+
+              topics.forEach(topic => {
+                if (selectedTopicIds.has(topic.id)) {
+                  const topicQs = allQuestions.filter(q => q.todo_id === topic.id);
+                  totalQuestionsInSelected += topicQs.length;
+                  completedQuestionsInSelected += topicQs.filter(q => userTasks.some(t => t.item_type === 'question' && t.item_id === q.id && t.status === 'Completed')).length;
+                }
+              });
+
+              const pendingQuestionsInSelected = totalQuestionsInSelected - completedQuestionsInSelected;
+
+              return (
+                <>
+                  <div 
+                    onClick={() => setDashboardFilter(prev => prev === 'completed' ? 'all' : 'completed')}
+                    style={{
+                      padding: '24px',
+                      borderRadius: '12px',
+                      border: `2px solid ${dashboardFilter === 'completed' ? '#137333' : 'var(--card-border)'}`,
+                      backgroundColor: dashboardFilter === 'completed' ? 'rgba(19, 115, 51, 0.08)' : 'var(--card-bg)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '150px',
+                      boxShadow: 'var(--card-shadow)'
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Completed Questions
+                      </span>
+                      <h3 style={{ fontSize: '2rem', fontWeight: '900', color: '#137333', marginTop: '12px', marginBottom: '8px' }}>
+                        {completedQuestionsInSelected}
+                      </h3>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#137333', fontWeight: '600' }}>
+                      {dashboardFilter === 'completed' ? '● Filtering Active (Click to reset)' : 'Click to filter completed topics'}
+                    </span>
+                  </div>
+
+                  <div 
+                    onClick={() => setDashboardFilter(prev => prev === 'pending' ? 'all' : 'pending')}
+                    style={{
+                      padding: '24px',
+                      borderRadius: '12px',
+                      border: `2px solid ${dashboardFilter === 'pending' ? '#b06000' : 'var(--card-border)'}`,
+                      backgroundColor: dashboardFilter === 'pending' ? 'rgba(176, 96, 0, 0.08)' : 'var(--card-bg)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '150px',
+                      boxShadow: 'var(--card-shadow)'
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Pending Questions
+                      </span>
+                      <h3 style={{ fontSize: '2rem', fontWeight: '900', color: '#b06000', marginTop: '12px', marginBottom: '8px' }}>
+                        {pendingQuestionsInSelected}
+                      </h3>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#b06000', fontWeight: '600' }}>
+                      {dashboardFilter === 'pending' ? '● Filtering Active (Click to reset)' : 'Click to filter pending topics'}
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
+
           </div>
 
           {/* Curriculum Explore Grid */}
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-heading)' }}>
-              {user?.role === 'admin' ? 'Explore Curriculum Topics' : 'Selected Curriculum Topics'}
+              {user?.role === 'admin' 
+                ? 'Explore Curriculum Topics' 
+                : dashboardFilter === 'completed' 
+                  ? 'Selected Topics (Completed)' 
+                  : dashboardFilter === 'pending' 
+                    ? 'Selected Topics (Pending / In Progress)' 
+                    : 'Selected Curriculum Topics'}
             </h3>
             
             {(() => {
               const selectedTopicIds = new Set(
-                userTasks.filter(t => t.item_type === 'topic').map(t => t.item_id)
+                userTasks
+                  .filter(t => t.item_type === 'topic')
+                  .map(t => t.item_id)
+                  .filter(id => topics.some(topic => topic.id === id))
               );
               
               const displayedTopics = topics.filter(topic => {
@@ -1708,16 +1808,32 @@ function DashboardContent({ searchQuery }) {
                 if (user?.role === 'admin') {
                   return matchesSearch;
                 }
-                return selectedTopicIds.has(topic.id) && matchesSearch;
+                
+                const isSelected = selectedTopicIds.has(topic.id);
+                if (!isSelected || !matchesSearch) return false;
+
+                const topicQs = allQuestions.filter(q => q.todo_id === topic.id);
+                const completedQCount = topicQs.filter(q => userTasks.some(t => t.item_type === 'question' && t.item_id === q.id && t.status === 'Completed')).length;
+                const isCompleted = topicQs.length > 0 && completedQCount === topicQs.length;
+
+                if (dashboardFilter === 'completed') return isCompleted;
+                if (dashboardFilter === 'pending') return !isCompleted;
+                return true;
               });
 
               if (displayedTopics.length === 0) {
                 return (
                   <div style={{ padding: '40px 24px', textAlign: 'center', border: '1.5px dashed var(--card-border)', borderRadius: '8px', color: 'var(--text-muted)' }}>
                     <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600' }}>
-                      {user?.role === 'admin' ? 'No topics match your search.' : 'You have not selected any topics yet.'}
+                      {user?.role === 'admin' 
+                        ? 'No topics match your search.' 
+                        : dashboardFilter === 'completed'
+                          ? 'No fully completed topics found.'
+                          : dashboardFilter === 'pending'
+                            ? 'All selected topics are fully completed!'
+                            : 'You have not selected any topics yet.'}
                     </p>
-                    {user?.role !== 'admin' && (
+                    {user?.role !== 'admin' && dashboardFilter === 'all' && (
                       <p style={{ margin: '6px 0 0 0', fontSize: '0.85rem' }}>
                         Go to the <strong style={{ color: 'var(--link-color)', cursor: 'pointer' }} onClick={() => router.push('/?filter=all')}>Curriculum</strong> tab in the sidebar to browse and select topics for your dashboard.
                       </p>
