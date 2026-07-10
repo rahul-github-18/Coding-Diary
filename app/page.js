@@ -250,6 +250,43 @@ function DashboardContent({ searchQuery }) {
     }
   };
 
+  const handleExportTopicMarkdown = (topic) => {
+    if (!topic) return;
+    const questionsForTopic = allQuestions.filter(q => q.todo_id === topic.id);
+    
+    let content = `# Topic: ${topic.title}\n`;
+    content += `* **Category**: ${topic.category || 'General'}\n`;
+    content += `* **Difficulty**: ${topic.difficulty || 'Beginner'}\n`;
+    content += `* **Estimated Time**: ${topic.estimated_time || '1 hour'}\n\n`;
+    content += `---\n\n`;
+    content += `## Questions (${questionsForTopic.length})\n\n`;
+    
+    questionsForTopic.forEach((q, idx) => {
+      content += `### ${idx + 1}. ${q.title}\n`;
+      content += `* **Difficulty**: ${q.difficulty || 'Beginner'}\n`;
+      content += `* **Tags**: ${q.tags || 'None'}\n\n`;
+      if (q.description) {
+        content += `#### Description\n${q.description}\n\n`;
+      }
+      if (q.code) {
+        content += `#### Starter / Reference Code\n\`\`\`java\n${q.code}\n\`\`\`\n\n`;
+      }
+      if (q.explanation) {
+        content += `#### Explanation & Answer\n${q.explanation}\n\n`;
+      }
+      content += `---\n\n`;
+    });
+    
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${topic.title.replace(/\s+/g, '_')}_Curriculum.md`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const renderModal = () => {
     if (!activeForm) return null;
 
@@ -1095,6 +1132,18 @@ function DashboardContent({ searchQuery }) {
                         </>
                       )}
                       <button
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        onClick={() => handleExportTopicMarkdown(activeGroup)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="7 10 12 15 17 10"></polyline>
+                          <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export Topic
+                      </button>
+                      <button
                         className="btn btn-primary"
                         style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: '600' }}
                         onClick={() => router.push(`/todo/${activeGroup.id}`)}
@@ -1160,7 +1209,8 @@ function DashboardContent({ searchQuery }) {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <button
                                     className="btn btn-secondary"
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       setEditingQuestion(q);
                                       setActiveForm('editQuestion');
                                     }}
@@ -1170,7 +1220,10 @@ function DashboardContent({ searchQuery }) {
                                   </button>
                                   <button
                                     className="btn btn-danger"
-                                    onClick={() => handleDeleteQuestion(q.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteQuestion(q.id);
+                                    }}
                                     style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: '600' }}
                                   >
                                     Delete
