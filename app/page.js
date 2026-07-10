@@ -38,6 +38,16 @@ function DashboardContent({ searchQuery }) {
   // Forms / Modals States
   const [activeForm, setActiveForm] = useState(null); // 'topic'
   const [newTopic, setNewTopic] = useState({ title: '', category: 'General', difficulty: 'Beginner', estimatedTime: '1 hour' });
+  const [editingTopic, setEditingTopic] = useState(null);
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [newQuestionForm, setNewQuestionForm] = useState({
+    title: '',
+    difficulty: 'Beginner',
+    tags: '',
+    description: '',
+    code: '',
+    explanation: ''
+  });
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -148,6 +158,406 @@ function DashboardContent({ searchQuery }) {
     } catch (err) {
       setError(err.message || 'Failed to create topic.');
     }
+  };
+
+  const handleEditTopicSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    try {
+      await todoService.updateTodo(editingTopic.id, {
+        title: editingTopic.title,
+        category: editingTopic.category,
+        difficulty: editingTopic.difficulty,
+        estimatedTime: editingTopic.estimated_time || editingTopic.estimatedTime
+      });
+      setSuccess('Topic updated successfully!');
+      setActiveForm(null);
+      loadDashboardData(user);
+    } catch (err) {
+      setError(err.message || 'Failed to update topic.');
+    }
+  };
+
+  const handleDeleteTopic = async (topicId) => {
+    if (!window.confirm('Are you sure you want to delete this topic and all its questions? This cannot be undone.')) return;
+    setError('');
+    setSuccess('');
+    try {
+      await todoService.deleteTodo(topicId);
+      setSuccess('Topic deleted successfully!');
+      setSelectedTopicId(null);
+      loadDashboardData(user);
+    } catch (err) {
+      setError('Failed to delete topic.');
+    }
+  };
+
+  const handleCreateQuestionSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    try {
+      await questionService.createQuestion(selectedTopicId, newQuestionForm);
+      setSuccess('Question added successfully!');
+      setNewQuestionForm({
+        title: '',
+        difficulty: 'Beginner',
+        tags: '',
+        description: '',
+        code: '',
+        explanation: ''
+      });
+      setActiveForm(null);
+      loadDashboardData(user);
+    } catch (err) {
+      setError(err.message || 'Failed to add question.');
+    }
+  };
+
+  const handleEditQuestionSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    try {
+      await questionService.updateQuestion(editingQuestion.id, {
+        title: editingQuestion.title,
+        difficulty: editingQuestion.difficulty,
+        tags: editingQuestion.tags,
+        description: editingQuestion.description,
+        code: editingQuestion.code,
+        explanation: editingQuestion.explanation
+      });
+      setSuccess('Question updated successfully!');
+      setActiveForm(null);
+      loadDashboardData(user);
+    } catch (err) {
+      setError(err.message || 'Failed to update question.');
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId) => {
+    if (!window.confirm('Are you sure you want to delete this question? This cannot be undone.')) return;
+    setError('');
+    setSuccess('');
+    try {
+      await questionService.deleteQuestion(questionId);
+      setSuccess('Question deleted successfully!');
+      loadDashboardData(user);
+    } catch (err) {
+      setError('Failed to delete question.');
+    }
+  };
+
+  const renderModal = () => {
+    if (!activeForm) return null;
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+        backdropFilter: 'blur(4px)'
+      }}>
+        <div className="card" style={{
+          width: '90%',
+          maxWidth: '600px',
+          padding: '24px',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+          border: '1px solid var(--card-border)',
+          backgroundColor: 'var(--card-bg)'
+        }}>
+          {activeForm === 'createTopic' && (
+            <form onSubmit={handleCreateTopic} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'var(--text-heading)' }}>
+                Add New Curriculum Topic
+              </h3>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Topic Title</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Advance SQL" 
+                  className="form-input" 
+                  value={newTopic.title} 
+                  onChange={e => setNewTopic({ ...newTopic, title: e.target.value })} 
+                  required 
+                  style={{ marginTop: '4px', width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Category</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. SQL" 
+                  className="form-input" 
+                  value={newTopic.category} 
+                  onChange={e => setNewTopic({ ...newTopic, category: e.target.value })} 
+                  style={{ marginTop: '4px', width: '100%' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Difficulty</label>
+                  <select 
+                    className="form-input" 
+                    value={newTopic.difficulty} 
+                    onChange={e => setNewTopic({ ...newTopic, difficulty: e.target.value })}
+                    style={{ marginTop: '4px', width: '100%' }}
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Estimated Time</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 2 hours" 
+                    className="form-input" 
+                    value={newTopic.estimatedTime} 
+                    onChange={e => setNewTopic({ ...newTopic, estimatedTime: e.target.value })} 
+                    style={{ marginTop: '4px', width: '100%' }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setActiveForm(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Create Topic</button>
+              </div>
+            </form>
+          )}
+
+          {activeForm === 'editTopic' && editingTopic && (
+            <form onSubmit={handleEditTopicSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'var(--text-heading)' }}>
+                Edit Topic Details
+              </h3>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Topic Title</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value={editingTopic.title} 
+                  onChange={e => setEditingTopic({ ...editingTopic, title: e.target.value })} 
+                  required 
+                  style={{ marginTop: '4px', width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Category</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value={editingTopic.category} 
+                  onChange={e => setEditingTopic({ ...editingTopic, category: e.target.value })} 
+                  style={{ marginTop: '4px', width: '100%' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Difficulty</label>
+                  <select 
+                    className="form-input" 
+                    value={editingTopic.difficulty} 
+                    onChange={e => setEditingTopic({ ...editingTopic, difficulty: e.target.value })}
+                    style={{ marginTop: '4px', width: '100%' }}
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Estimated Time</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={editingTopic.estimated_time || editingTopic.estimatedTime} 
+                    onChange={e => setEditingTopic({ ...editingTopic, estimated_time: e.target.value })} 
+                    style={{ marginTop: '4px', width: '100%' }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setActiveForm(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          )}
+
+          {activeForm === 'createQuestion' && (
+            <form onSubmit={handleCreateQuestionSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'var(--text-heading)' }}>
+                Add Question to Topic
+              </h3>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Question Title</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Write a SQL query to find..." 
+                  className="form-input" 
+                  value={newQuestionForm.title} 
+                  onChange={e => setNewQuestionForm({ ...newQuestionForm, title: e.target.value })} 
+                  required 
+                  style={{ marginTop: '4px', width: '100%' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Difficulty</label>
+                  <select 
+                    className="form-input" 
+                    value={newQuestionForm.difficulty} 
+                    onChange={e => setNewQuestionForm({ ...newQuestionForm, difficulty: e.target.value })}
+                    style={{ marginTop: '4px', width: '100%' }}
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Tags</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. SQL, Window Functions" 
+                    className="form-input" 
+                    value={newQuestionForm.tags} 
+                    onChange={e => setNewQuestionForm({ ...newQuestionForm, tags: e.target.value })} 
+                    style={{ marginTop: '4px', width: '100%' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Description / Instructions</label>
+                <textarea 
+                  placeholder="Problem details..." 
+                  className="form-input" 
+                  rows={3}
+                  value={newQuestionForm.description} 
+                  onChange={e => setNewQuestionForm({ ...newQuestionForm, description: e.target.value })} 
+                  style={{ marginTop: '4px', resize: 'vertical', width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Working Code Template</label>
+                <textarea 
+                  placeholder="// Provide starter code or reference solution..." 
+                  className="form-input" 
+                  rows={4}
+                  value={newQuestionForm.code} 
+                  onChange={e => setNewQuestionForm({ ...newQuestionForm, code: e.target.value })} 
+                  style={{ marginTop: '4px', fontFamily: 'monospace', resize: 'vertical', width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Explanation / Notes</label>
+                <textarea 
+                  placeholder="Solution steps or markdown explanation..." 
+                  className="form-input" 
+                  rows={3}
+                  value={newQuestionForm.explanation} 
+                  onChange={e => setNewQuestionForm({ ...newQuestionForm, explanation: e.target.value })} 
+                  style={{ marginTop: '4px', resize: 'vertical', width: '100%' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setActiveForm(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Create Question</button>
+              </div>
+            </form>
+          )}
+
+          {activeForm === 'editQuestion' && editingQuestion && (
+            <form onSubmit={handleEditQuestionSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'var(--text-heading)' }}>
+                Edit Question Details
+              </h3>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Question Title</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value={editingQuestion.title} 
+                  onChange={e => setEditingQuestion({ ...editingQuestion, title: e.target.value })} 
+                  required 
+                  style={{ marginTop: '4px', width: '100%' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Difficulty</label>
+                  <select 
+                    className="form-input" 
+                    value={editingQuestion.difficulty} 
+                    onChange={e => setEditingQuestion({ ...editingQuestion, difficulty: e.target.value })}
+                    style={{ marginTop: '4px', width: '100%' }}
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Tags</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={editingQuestion.tags} 
+                    onChange={e => setEditingQuestion({ ...editingQuestion, tags: e.target.value })} 
+                    style={{ marginTop: '4px', width: '100%' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Description / Instructions</label>
+                <textarea 
+                  className="form-input" 
+                  rows={3}
+                  value={editingQuestion.description} 
+                  onChange={e => setEditingQuestion({ ...editingQuestion, description: e.target.value })} 
+                  style={{ marginTop: '4px', resize: 'vertical', width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Working Code Template</label>
+                <textarea 
+                  className="form-input" 
+                  rows={4}
+                  value={editingQuestion.code} 
+                  onChange={e => setEditingQuestion({ ...editingQuestion, code: e.target.value })} 
+                  style={{ marginTop: '4px', fontFamily: 'monospace', resize: 'vertical', width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Explanation / Notes</label>
+                <textarea 
+                  className="form-input" 
+                  rows={3}
+                  value={editingQuestion.explanation} 
+                  onChange={e => setEditingQuestion({ ...editingQuestion, explanation: e.target.value })} 
+                  style={{ marginTop: '4px', resize: 'vertical', width: '100%' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setActiveForm(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // User Actions
@@ -371,35 +781,7 @@ function DashboardContent({ searchQuery }) {
           ))}
         </div>
 
-        {/* Quick Actions Panel */}
-        <div className="card" style={{ minHeight: 'auto', padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0, color: 'var(--text-heading)' }}>
-              Curriculum Manager
-            </h3>
-            <button className="btn btn-primary" onClick={() => setActiveForm(activeForm === 'topic' ? null : 'topic')}>
-              {activeForm === 'topic' ? 'Cancel' : '+ Add New Topic'}
-            </button>
-          </div>
 
-          {/* Quick Action Forms */}
-          {activeForm === 'topic' && (
-            <form onSubmit={handleCreateTopic} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '500px', padding: '16px', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
-              <h4 style={{ fontWeight: '600', color: 'var(--text-heading)', margin: 0 }}>Create New Topic</h4>
-              <input type="text" placeholder="Topic Title (e.g. React Hooks)" className="form-input" value={newTopic.title} onChange={e => setNewTopic({ ...newTopic, title: e.target.value })} required />
-              <input type="text" placeholder="Category (e.g. React)" className="form-input" value={newTopic.category} onChange={e => setNewTopic({ ...newTopic, category: e.target.value })} />
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <select className="form-input" value={newTopic.difficulty} onChange={e => setNewTopic({ ...newTopic, difficulty: e.target.value })}>
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                </select>
-                <input type="text" placeholder="Est. Time (e.g. 2 hours)" className="form-input" value={newTopic.estimatedTime} onChange={e => setNewTopic({ ...newTopic, estimatedTime: e.target.value })} />
-              </div>
-              <button type="submit" className="btn btn-success">Save Topic</button>
-            </form>
-          )}
-        </div>
 
         {/* Topics List */}
         <div>
@@ -595,23 +977,35 @@ function DashboardContent({ searchQuery }) {
 
           </div>
         ) : (
-          /* Coding Tasks Split View (Master-Detail) */
+          /* Curriculum Management Split View (Master-Detail) */
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', alignItems: 'start' }}>
             
             {/* Left Side: Topic Navigation Menu (Master Panel) */}
             <div className="card" style={{ padding: '20px', minHeight: 'auto' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-heading)', marginBottom: '16px' }}>
-                Curriculum Topics
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-heading)', margin: 0 }}>
+                  Curriculum Topics
+                </h3>
+                {user?.role === 'admin' && (
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      setNewTopic({ title: '', category: 'General', difficulty: 'Beginner', estimatedTime: '1 hour' });
+                      setActiveForm('createTopic');
+                    }}
+                    style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: '600' }}
+                  >
+                    + Add Topic
+                  </button>
+                )}
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {groupedTasks.length === 0 ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No topics match search.</div>
                 ) : (
                   groupedTasks.map((group) => {
                     const isActive = selectedTopicId === group.id;
-                    const qCompleted = group.questions.filter(q => q.status === 'Completed').length;
                     const qTotal = group.questions.length;
-                    const percentage = qTotal > 0 ? Math.round((qCompleted / qTotal) * 100) : 0;
 
                     return (
                       <div 
@@ -636,15 +1030,12 @@ function DashboardContent({ searchQuery }) {
                           <span style={{ fontSize: '0.65rem', fontWeight: '600', padding: '1px 4px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                             {group.category}
                           </span>
-                          <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)' }}>
-                            {percentage}%
-                          </span>
                         </div>
                         <div style={{ fontSize: '0.9rem', fontWeight: '700', color: isActive ? 'var(--link-color)' : 'var(--text-heading)' }}>
                           {group.title}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          Questions: {qCompleted} / {qTotal}
+                          Questions: {qTotal}
                         </div>
                       </div>
                     );
@@ -682,20 +1073,27 @@ function DashboardContent({ searchQuery }) {
                     </div>
                     
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <button
-                        onClick={() => handleToggleItemStatus({ taskId: activeGroup.taskId, status: activeGroup.status, dbId: activeGroup.id, item_type: 'topic' })}
-                        className="btn"
-                        style={{
-                          padding: '6px 14px',
-                          fontSize: '0.8rem',
-                          fontWeight: '600',
-                          backgroundColor: activeGroup.status === 'Completed' ? '#e6f4ea' : activeGroup.status === 'In Progress' ? '#e8f0fe' : 'var(--btn-secondary-bg)',
-                          color: activeGroup.status === 'Completed' ? '#137333' : activeGroup.status === 'In Progress' ? '#1a73e8' : 'var(--text-color)',
-                          border: '1px solid ' + (activeGroup.status === 'Completed' ? '#ceead6' : activeGroup.status === 'In Progress' ? '#d2e3fc' : 'var(--card-border)')
-                        }}
-                      >
-                        Topic: {activeGroup.status}
-                      </button>
+                      {user?.role === 'admin' && (
+                        <>
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => {
+                              setEditingTopic(activeGroup);
+                              setActiveForm('editTopic');
+                            }}
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: '600' }}
+                          >
+                            Edit Topic
+                          </button>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => handleDeleteTopic(activeGroup.id)}
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: '600' }}
+                          >
+                            Delete Topic
+                          </button>
+                        </>
+                      )}
                       <button
                         className="btn btn-primary"
                         style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: '600' }}
@@ -706,9 +1104,30 @@ function DashboardContent({ searchQuery }) {
                     </div>
                   </div>
 
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-heading)', marginBottom: '12px' }}>
-                    Curriculum Questions
-                  </h4>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-heading)', margin: 0 }}>
+                      Curriculum Questions
+                    </h4>
+                    {user?.role === 'admin' && (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => {
+                          setNewQuestionForm({
+                            title: '',
+                            difficulty: 'Beginner',
+                            tags: '',
+                            description: '',
+                            code: '',
+                            explanation: ''
+                          });
+                          setActiveForm('createQuestion');
+                        }}
+                        style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: '600' }}
+                      >
+                        + Add Question
+                      </button>
+                    )}
+                  </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {activeGroup.questions.length === 0 ? (
@@ -722,35 +1141,32 @@ function DashboardContent({ searchQuery }) {
                             <span style={{ fontSize: '0.65rem', padding: '2px 6px', backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '4px', textTransform: 'uppercase', fontWeight: '600', color: 'var(--text-muted)' }}>
                               question
                             </span>
-                            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-heading)', textDecoration: q.status === 'Completed' ? 'line-through' : 'none', opacity: q.status === 'Completed' ? 0.6 : 1 }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-heading)' }}>
                               {q.title}
                             </span>
                           </div>
                           
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              onClick={() => handleToggleItemStatus({ taskId: q.taskId, status: q.status, dbId: q.id, item_type: 'question' })}
-                              className="btn"
-                              style={{
-                                padding: '4px 10px',
-                                fontSize: '0.75rem',
-                                backgroundColor: q.status === 'Completed' ? '#e6f4ea' : q.status === 'In Progress' ? '#e8f0fe' : 'var(--btn-secondary-bg)',
-                                color: q.status === 'Completed' ? '#137333' : q.status === 'In Progress' ? '#1a73e8' : 'var(--text-color)',
-                                border: '1px solid ' + (q.status === 'Completed' ? '#ceead6' : q.status === 'In Progress' ? '#d2e3fc' : 'var(--card-border)')
-                              }}
-                            >
-                              {q.status}
-                            </button>
-                            {q.taskId && (
+                          {user?.role === 'admin' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <button
-                                onClick={() => handleRemoveTaskItem({ taskId: q.taskId })}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem', padding: '4px' }}
-                                title="Remove from board"
+                                className="btn btn-secondary"
+                                onClick={() => {
+                                  setEditingQuestion(q);
+                                  setActiveForm('editQuestion');
+                                }}
+                                style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: '600' }}
                               >
-                                &times;
+                                Edit
                               </button>
-                            )}
-                          </div>
+                              <button
+                                className="btn btn-danger"
+                                onClick={() => handleDeleteQuestion(q.id)}
+                                style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: '600' }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
@@ -880,6 +1296,7 @@ function DashboardContent({ searchQuery }) {
           </div>
         </div>
       )}
+      {renderModal()}
     </div>
   );
 }

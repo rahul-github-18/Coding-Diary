@@ -65,7 +65,7 @@ const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme }) => {
             className={`sidebar-link ${pathname === '/' && filter === 'all' ? 'active' : ''}`}
             onClick={() => handleNavigate('/', 'all')}
           >
-            Coding Tasks
+            Curriculum
           </div>
         </li>
         <li>
