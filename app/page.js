@@ -1511,6 +1511,17 @@ function DashboardContent({ searchQuery }) {
                                 <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-heading)' }}>
                                   {q.title}
                                 </span>
+                                <span style={{ 
+                                  fontSize: '0.7rem', 
+                                  fontWeight: '600', 
+                                  padding: '2px 6px', 
+                                  borderRadius: '4px',
+                                  backgroundColor: q.difficulty === 'Advanced' ? '#fde8e8' : q.difficulty === 'Intermediate' ? '#fef3c7' : '#e6f4ea',
+                                  color: q.difficulty === 'Advanced' ? '#d93025' : q.difficulty === 'Intermediate' ? '#b06000' : '#137333',
+                                  marginLeft: '4px'
+                                }}>
+                                  {q.difficulty}
+                                </span>
                               </div>
                               
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1576,16 +1587,15 @@ function DashboardContent({ searchQuery }) {
                                 gap: '12px'
                               }}>
                                 {/* Badges & Metadata */}
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: q.difficulty === 'Advanced' ? '#d93025' : q.difficulty === 'Intermediate' ? '#b06000' : '#137333' }}>
-                                    {q.difficulty}
-                                  </span>
-                                  {q.tags && q.tags.split(',').map((tag, idx) => (
-                                    <span key={idx} style={{ fontSize: '0.7rem', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)' }}>
-                                      {tag.trim()}
-                                    </span>
-                                  ))}
-                                </div>
+                                {q.tags && (
+                                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    {q.tags.split(',').map((tag, idx) => (
+                                      <span key={idx} style={{ fontSize: '0.7rem', padding: '2px 6px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                                        {tag.trim()}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
 
                                 {/* Description */}
                                 {q.description && (
@@ -1597,10 +1607,20 @@ function DashboardContent({ searchQuery }) {
                                   </div>
                                 )}
 
+                                {/* Explanation */}
+                                {q.explanation && (
+                                  <div>
+                                    <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-heading)' }}>Explanation</h5>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-color)', lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
+                                      {q.explanation}
+                                    </p>
+                                  </div>
+                                )}
+
                                 {/* Code Template */}
                                 {q.code && (
                                   <div>
-                                    <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-heading)' }}>Starter / Reference Code</h5>
+                                    <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-heading)' }}>Code</h5>
                                     <pre style={{ 
                                       margin: 0, 
                                       padding: '12px', 
@@ -1614,16 +1634,6 @@ function DashboardContent({ searchQuery }) {
                                     }}>
                                       <code>{q.code}</code>
                                     </pre>
-                                  </div>
-                                )}
-
-                                {/* Explanation */}
-                                {q.explanation && (
-                                  <div>
-                                    <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-heading)' }}>Explanation & Answer</h5>
-                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-color)', lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
-                                      {q.explanation}
-                                    </p>
                                   </div>
                                 )}
                               </div>
