@@ -9,9 +9,9 @@ const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme }) => {
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
   const [currentUser, setCurrentUser] = useState(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
 
   useEffect(() => {
-    // Read logged-in user from localStorage on mount
     try {
       const u = JSON.parse(localStorage.getItem('currentUser'));
       setCurrentUser(u);
@@ -19,6 +19,49 @@ const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme }) => {
       console.error('Error reading currentUser from localStorage:', e);
     }
   }, []);
+
+  useEffect(() => {
+    const isStandalone = 
+      (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) || 
+      (typeof window !== 'undefined' && window.navigator.standalone === true);
+
+    if (isStandalone) {
+      setShowInstallBtn(false);
+      return;
+    }
+
+    if (typeof window !== 'undefined' && window.deferredPrompt) {
+      setShowInstallBtn(true);
+    }
+
+    const handlePromptAvailable = () => {
+      setShowInstallBtn(true);
+    };
+
+    const handlePromptInstalled = () => {
+      setShowInstallBtn(false);
+    };
+
+    window.addEventListener('pwa-prompt-available', handlePromptAvailable);
+    window.addEventListener('pwa-prompt-installed', handlePromptInstalled);
+
+    return () => {
+      window.removeEventListener('pwa-prompt-available', handlePromptAvailable);
+      window.removeEventListener('pwa-prompt-installed', handlePromptInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    const promptEvent = window.deferredPrompt;
+    if (!promptEvent) return;
+
+    promptEvent.prompt();
+    const { outcome } = await promptEvent.userChoice;
+    console.log(`User response to install prompt: ${outcome}`);
+
+    window.deferredPrompt = null;
+    setShowInstallBtn(false);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
@@ -111,6 +154,18 @@ const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme }) => {
             )}
           </div>
         </li>
+        {showInstallBtn && (
+          <li>
+            <div className="sidebar-link" onClick={handleInstallClick} style={{ color: 'var(--link-color)', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Install App
+            </div>
+          </li>
+        )}
         <li style={{ marginTop: 'auto' }}>
           <div className="sidebar-link" style={{ color: '#d93025' }} onClick={handleLogout}>
             Logout
