@@ -18,36 +18,44 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
 
   // Ticketing and Notification states
   const [queries, setQueries] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedQueryDetail, setSelectedQueryDetail] = useState(null);
+  const [selectedSubmissionDetail, setSelectedSubmissionDetail] = useState(null);
 
-  const fetchUserQueries = useCallback(async () => {
+  const fetchUserNotifications = useCallback(async () => {
     const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
     if (!userId) return;
     try {
-      const data = await userQueryService.getQueries();
-      setQueries(data || []);
-      const unread = (data || []).filter(q => q.reply_text && !q.is_read_by_user).length;
-      setUnreadCount(unread);
+      const [queriesData, submissionsData] = await Promise.all([
+        userQueryService.getQueries().catch(() => []),
+        userQueryService.getSubmissions().catch(() => [])
+      ]);
+      const q = queriesData || [];
+      const s = submissionsData || [];
+      setQueries(q);
+      setSubmissions(s);
+      const unreadQ = q.filter(item => item.reply_text && !item.is_read_by_user).length;
+      const unreadS = s.filter(item => item.admin_reply && !item.is_read_by_user).length;
+      setUnreadCount(unreadQ + unreadS);
     } catch (e) {
-      console.error('Error fetching user queries for notifications:', e);
+      console.error('Error fetching notifications:', e);
     }
   }, []);
 
   useEffect(() => {
-    fetchUserQueries();
-    // Poll queries every 30 seconds for real-time notifications
-    const interval = setInterval(fetchUserQueries, 30000);
+    fetchUserNotifications();
+    const interval = setInterval(fetchUserNotifications, 30000);
     return () => clearInterval(interval);
-  }, [fetchUserQueries]);
+  }, [fetchUserNotifications]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.addEventListener('refresh-notifications', fetchUserQueries);
-      return () => window.removeEventListener('refresh-notifications', fetchUserQueries);
+      window.addEventListener('refresh-notifications', fetchUserNotifications);
+      return () => window.removeEventListener('refresh-notifications', fetchUserNotifications);
     }
-  }, [fetchUserQueries]);
+  }, [fetchUserNotifications]);
 
   // Theme State
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -494,73 +502,121 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
                               {unreadCount > 0 && <span style={{ fontSize: '0.75rem', color: '#ff4d4f', fontWeight: 'normal' }}>{unreadCount} unread</span>}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              {queries.length === 0 ? (
+                              {queries.length === 0 && submissions.length === 0 ? (
                                 <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                  No queries submitted yet.
+                                  No notifications yet.
                                 </div>
                               ) : (
-                                queries.map((q) => {
-                                  const isUnread = q.reply_text && !q.is_read_by_user;
-                                  return (
-                                    <div
-                                      key={q.id}
-                                      onClick={async () => {
-                                        setNotificationsOpen(false);
-                                        setSelectedQueryDetail(q);
-                                        if (isUnread) {
-                                          try {
-                                            await userQueryService.markQueryAsRead(q.id);
-                                            fetchUserQueries();
-                                            // Trigger reload in student dashboard
-                                            window.dispatchEvent(new Event('refresh-queries'));
-                                          } catch (err) {
-                                            console.error('Error marking query read:', err);
+                                <>
+                                  {/* Query notifications */}
+                                  {queries.map((q) => {
+                                    const isUnread = q.reply_text && !q.is_read_by_user;
+                                    return (
+                                      <div
+                                        key={`q-${q.id}`}
+                                        onClick={async () => {
+                                          setNotificationsOpen(false);
+                                          setSelectedQueryDetail(q);
+                                          if (isUnread) {
+                                            try {
+                                              await userQueryService.markQueryAsRead(q.id);
+                                              fetchUserNotifications();
+                                              window.dispatchEvent(new Event('refresh-queries'));
+                                            } catch (err) {
+                                              console.error('Error marking query read:', err);
+                                            }
                                           }
-                                        }
-                                      }}
-                                      style={{
-                                        padding: '12px 16px',
-                                        borderBottom: '1px solid var(--card-border)',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '4px',
-                                        backgroundColor: isUnread ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
-                                        transition: 'background-color 0.15s ease',
-                                        textAlign: 'left'
-                                      }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--btn-secondary-bg)'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isUnread ? 'rgba(56, 189, 248, 0.08)' : 'transparent'}
-                                    >
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--link-color)' }}>
-                                          QRY-#{q.id}
-                                        </span>
-                                        <span style={{
-                                          fontSize: '0.65rem',
-                                          padding: '2px 6px',
-                                          borderRadius: '4px',
-                                          fontWeight: '600',
-                                          backgroundColor: q.reply_text ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                          color: q.reply_text ? '#10b981' : '#f59e0b'
-                                        }}>
-                                          {q.reply_text ? 'Replied' : 'Pending'}
-                                        </span>
-                                      </div>
-                                      <p style={{ fontSize: '0.8rem', color: 'var(--text-color)', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                        {q.query_text}
-                                      </p>
-                                      {q.reply_text && (
-                                        <p style={{ fontSize: '0.75rem', color: '#10b981', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: '500' }}>
-                                          Reply: {q.reply_text}
+                                        }}
+                                        style={{
+                                          padding: '12px 16px',
+                                          borderBottom: '1px solid var(--card-border)',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: '4px',
+                                          backgroundColor: isUnread ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
+                                          transition: 'background-color 0.15s ease',
+                                          textAlign: 'left'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--btn-secondary-bg)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isUnread ? 'rgba(56, 189, 248, 0.08)' : 'transparent'}
+                                      >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span style={{ fontSize: '0.6rem', fontWeight: '700', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(59,130,246,0.15)', color: '#3b82f6', textTransform: 'uppercase' }}>Query</span>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--link-color)' }}>QRY-#{q.id}</span>
+                                          </div>
+                                          <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: '600', backgroundColor: q.reply_text ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: q.reply_text ? '#10b981' : '#f59e0b' }}>
+                                            {q.reply_text ? 'Replied' : 'Pending'}
+                                          </span>
+                                        </div>
+                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-color)', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                          {q.query_text}
                                         </p>
-                                      )}
-                                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                                        {new Date(q.created_at).toLocaleDateString()}
-                                      </span>
-                                    </div>
-                                  );
-                                })
+                                        {q.reply_text && (
+                                          <p style={{ fontSize: '0.75rem', color: '#10b981', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: '500' }}>
+                                            Reply: {q.reply_text}
+                                          </p>
+                                        )}
+                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{new Date(q.created_at).toLocaleDateString()}</span>
+                                      </div>
+                                    );
+                                  })}
+
+                                  {/* Submission notifications */}
+                                  {submissions.map((s) => {
+                                    const isUnread = s.admin_reply && !s.is_read_by_user;
+                                    return (
+                                      <div
+                                        key={`s-${s.id}`}
+                                        onClick={async () => {
+                                          setNotificationsOpen(false);
+                                          setSelectedSubmissionDetail(s);
+                                          if (isUnread) {
+                                            try {
+                                              await userQueryService.markSubmissionAsRead(s.id);
+                                              fetchUserNotifications();
+                                            } catch (err) {
+                                              console.error('Error marking submission read:', err);
+                                            }
+                                          }
+                                        }}
+                                        style={{
+                                          padding: '12px 16px',
+                                          borderBottom: '1px solid var(--card-border)',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: '4px',
+                                          backgroundColor: isUnread ? 'rgba(79, 70, 229, 0.08)' : 'transparent',
+                                          transition: 'background-color 0.15s ease',
+                                          textAlign: 'left'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--btn-secondary-bg)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isUnread ? 'rgba(79, 70, 229, 0.08)' : 'transparent'}
+                                      >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span style={{ fontSize: '0.6rem', fontWeight: '700', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(79,70,229,0.15)', color: '#4f46e5', textTransform: 'uppercase' }}>Code</span>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--link-color)' }}>SUB-#{s.id}</span>
+                                          </div>
+                                          <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: '600', backgroundColor: s.admin_reply ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: s.admin_reply ? '#10b981' : '#f59e0b' }}>
+                                            {s.admin_reply ? 'Reviewed' : 'Pending'}
+                                          </span>
+                                        </div>
+                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-color)', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                          {s.question_title}
+                                        </p>
+                                        {s.admin_reply && (
+                                          <p style={{ fontSize: '0.75rem', color: '#10b981', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: '500' }}>
+                                            Feedback: {s.admin_reply}
+                                          </p>
+                                        )}
+                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{new Date(s.created_at).toLocaleDateString()}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </>
                               )}
                             </div>
                           </div>
@@ -826,6 +882,100 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
               <button className="btn btn-secondary" onClick={() => setSelectedQueryDetail(null)}>
                 Close Ticket
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Submission Detail Modal */}
+      {selectedSubmissionDetail && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1100, backdropFilter: 'blur(4px)', padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '600px',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
+              position: 'relative',
+              textAlign: 'left',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            <button
+              onClick={() => setSelectedSubmissionDetail(null)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.25rem' }}
+            >
+              &times;
+            </button>
+
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-heading)', margin: '0 0 4px 0' }}>
+              Code Submission: SUB-#{selectedSubmissionDetail.id}
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 20px 0', borderBottom: '1px solid var(--card-border)', paddingBottom: '12px' }}>
+              {selectedSubmissionDetail.todos?.title} → {selectedSubmissionDetail.question_title}
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Code</span>
+                <pre style={{
+                  margin: '6px 0 0 0',
+                  padding: '14px',
+                  backgroundColor: '#1e1e2f',
+                  color: '#f8f8f2',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  fontSize: '0.78rem',
+                  fontFamily: 'monospace',
+                  overflowX: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                  maxHeight: '280px',
+                  overflowY: 'auto'
+                }}>
+                  {selectedSubmissionDetail.code}
+                </pre>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  Submitted on {new Date(selectedSubmissionDetail.created_at).toLocaleString()}
+                </span>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Admin Feedback</span>
+                {selectedSubmissionDetail.admin_reply ? (
+                  <>
+                    <p style={{ fontSize: '0.9rem', color: '#10b981', margin: '6px 0 0 0', backgroundColor: 'rgba(16, 185, 129, 0.05)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.2)', whiteSpace: 'pre-wrap', fontWeight: '500' }}>
+                      {selectedSubmissionDetail.admin_reply}
+                    </p>
+                    {selectedSubmissionDetail.replied_at && (
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                        Reviewed on {new Date(selectedSubmissionDetail.replied_at).toLocaleString()}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <p style={{ fontSize: '0.85rem', color: '#f59e0b', margin: '6px 0 0 0', fontStyle: 'italic', backgroundColor: 'rgba(245, 158, 11, 0.05)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                    Your submission is pending review. We will notify you once the admin adds feedback.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+              <button className="btn btn-secondary" onClick={() => setSelectedSubmissionDetail(null)}>
+                Close
               </button>
             </div>
           </div>

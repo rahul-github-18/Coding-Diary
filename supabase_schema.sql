@@ -145,5 +145,14 @@ CREATE TABLE IF NOT EXISTS user_submissions (
   topic_id INTEGER REFERENCES todos(id) ON DELETE CASCADE,
   question_title VARCHAR(255) NOT NULL,
   code TEXT NOT NULL,
+  admin_reply TEXT DEFAULT NULL,
+  is_read_by_user BOOLEAN DEFAULT true,
+  replied_at TIMESTAMP DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Migration: add reply columns if table already exists (run in Supabase SQL editor)
+-- ALTER TABLE user_submissions ADD COLUMN IF NOT EXISTS admin_reply TEXT DEFAULT NULL;
+-- ALTER TABLE user_submissions ADD COLUMN IF NOT EXISTS is_read_by_user BOOLEAN DEFAULT true;
+-- ALTER TABLE user_submissions ADD COLUMN IF NOT EXISTS replied_at TIMESTAMP DEFAULT NULL;
+

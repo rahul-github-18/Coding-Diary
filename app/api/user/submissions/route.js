@@ -7,12 +7,31 @@ export const dynamic = 'force-dynamic';
 async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
-
   const user = await getCachedUser(reqUserId);
-  if (!user || !user.approved) {
-    return null;
-  }
+  if (!user || !user.approved) return null;
   return user;
+}
+
+export async function GET(req) {
+  try {
+    const user = await checkUser(req);
+    if (!user) {
+      return NextResponse.json({ message: 'Access Denied. Insufficient permissions.' }, { status: 403 });
+    }
+
+    const { data: submissions, error } = await supabase
+      .from('user_submissions')
+      .select('*, todos(title)')
+      .eq('user_id', user.id)
+      .order('id', { ascending: false });
+
+    if (error) throw error;
+
+    return NextResponse.json(submissions);
+  } catch (error) {
+    console.error('GET user submissions error:', error);
+    return NextResponse.json({ message: 'Failed to retrieve submissions.' }, { status: 500 });
+  }
 }
 
 export async function POST(req) {
