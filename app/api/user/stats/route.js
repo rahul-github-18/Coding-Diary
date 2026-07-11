@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getCachedCurriculum } from '@/lib/cache';
+import { getCachedCurriculum, getCachedUser } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,13 +8,8 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', reqUserId)
-    .maybeSingle();
-
-  if (error || !user || !user.approved) {
+  const user = await getCachedUser(reqUserId);
+  if (!user || !user.approved) {
     return null;
   }
   return user;
@@ -37,22 +32,22 @@ export async function GET(req) {
     const nCount = notes.length;
     const totalItems = qCount + eCount + nCount;
 
-    // Fetch user completed tasks and recent tasks in parallel
+    // Fetch user completed tasks in a single query
     console.time('Supabase: Fetch user_tasks (stats)');
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoISO = sevenDaysAgo.toISOString();
 
-    const [completedRes, recentTasksRes] = await Promise.all([
-      supabase.from('user_tasks').select('item_type, item_id').eq('user_id', user.id).eq('status', 'Completed'),
-      supabase.from('user_tasks').select('completed_at').eq('user_id', user.id).eq('status', 'Completed').gte('completed_at', sevenDaysAgo.toISOString())
-    ]);
+    const { data: userCompletedTasks, error: completedError } = await supabase
+      .from('user_tasks')
+      .select('item_type, item_id, completed_at')
+      .eq('user_id', user.id)
+      .eq('status', 'Completed');
     console.timeEnd('Supabase: Fetch user_tasks (stats)');
 
-    if (completedRes.error) throw completedRes.error;
-    if (recentTasksRes.error) throw recentTasksRes.error;
+    if (completedError) throw completedError;
 
-    const userCompletedTasks = completedRes.data || [];
-    const completedItems = userCompletedTasks.length;
+    const completedItems = (userCompletedTasks || []).length;
 
     // Percentage
     const learningPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -99,10 +94,10 @@ export async function GET(req) {
       }
     });
 
-    // Group weekly activity by YYYY-MM-DD
+    // Group weekly activity by YYYY-MM-DD (filtered in-memory)
     const activityMap = {};
-    (recentTasksRes.data || []).forEach(t => {
-      if (t.completed_at) {
+    (userCompletedTasks || []).forEach(t => {
+      if (t.completed_at && t.completed_at >= sevenDaysAgoISO) {
         const dateStr = new Date(t.completed_at).toISOString().split('T')[0];
         activityMap[dateStr] = (activityMap[dateStr] || 0) + 1;
       }

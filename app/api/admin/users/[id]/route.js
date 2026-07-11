@@ -1,21 +1,16 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+import { getCachedUser, invalidateUserCache } from '@/lib/cache';
+
 export const dynamic = 'force-dynamic';
 
 async function checkAdmin(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  console.time('Supabase: Check Admin role (PUT user)');
-  const { data: adminCheck, error } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', reqUserId)
-    .maybeSingle();
-  console.timeEnd('Supabase: Check Admin role (PUT user)');
-
-  if (error || !adminCheck || adminCheck.role !== 'admin') {
+  const user = await getCachedUser(reqUserId);
+  if (!user || user.role !== 'admin') {
     return null;
   }
   return reqUserId;
@@ -67,6 +62,9 @@ export async function PUT(req, { params }) {
 
     if (updateError) throw updateError;
 
+    // Invalidate user cache to apply updates immediately
+    invalidateUserCache(userId);
+
     if (!updatedUsers || updatedUsers.length === 0) {
       const { data: checkUser } = await supabase
         .from('users')
@@ -116,6 +114,9 @@ export async function DELETE(req, { params }) {
     console.timeEnd('Supabase: Delete User');
 
     if (deleteError) throw deleteError;
+
+    // Invalidate user cache upon deletion
+    invalidateUserCache(userId);
 
     if (!deletedRows || deletedRows.length === 0) {
       const { data: checkUser } = await supabase

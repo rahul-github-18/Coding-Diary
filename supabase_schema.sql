@@ -124,3 +124,5 @@ CREATE INDEX IF NOT EXISTS idx_code_examples_topic_id ON code_examples(topic_id)
 CREATE INDEX IF NOT EXISTS idx_notes_topic_id ON notes(topic_id);
 CREATE INDEX IF NOT EXISTS idx_user_tasks_user_id ON user_tasks(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_tasks_added_date ON user_tasks(added_date);
+CREATE INDEX IF NOT EXISTS idx_user_tasks_user_status ON user_tasks(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_user_tasks_user_item ON user_tasks(user_id, item_type, item_id);

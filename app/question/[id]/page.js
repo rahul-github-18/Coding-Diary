@@ -2,7 +2,27 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import Editor from '@monaco-editor/react';
+import dynamic from 'next/dynamic';
+
+const Editor = dynamic(() => import('@monaco-editor/react'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ 
+      height: '100%', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      backgroundColor: '#1e1e1e', 
+      color: 'var(--text-muted)', 
+      borderRadius: '4px', 
+      border: '1px solid var(--card-border)', 
+      fontSize: '0.85rem' 
+    }}>
+      Loading Code Editor...
+    </div>
+  )
+});
+
 import Layout from '@/components/Layout';
 import { questionService } from '@/lib/api';
 

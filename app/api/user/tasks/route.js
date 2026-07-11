@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getCachedCurriculum } from '@/lib/cache';
+import { getCachedCurriculum, getCachedUser } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,13 +8,8 @@ async function checkUser(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, approved, role, can_view')
-    .eq('id', reqUserId)
-    .maybeSingle();
-
-  if (error || !user) {
+  const user = await getCachedUser(reqUserId);
+  if (!user || !user.approved) {
     return null;
   }
   return user;

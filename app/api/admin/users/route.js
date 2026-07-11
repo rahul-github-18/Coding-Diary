@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+import { getCachedUser } from '@/lib/cache';
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -8,15 +10,8 @@ async function checkAdmin(req) {
   const reqUserId = req.headers.get('x-user-id');
   if (!reqUserId) return null;
 
-  console.time('Supabase: Check Admin role');
-  const { data: adminCheck, error } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', reqUserId)
-    .maybeSingle();
-  console.timeEnd('Supabase: Check Admin role');
-
-  if (error || !adminCheck || adminCheck.role !== 'admin') {
+  const user = await getCachedUser(reqUserId);
+  if (!user || user.role !== 'admin') {
     return null;
   }
   return reqUserId;
