@@ -35,6 +35,7 @@ function TodoDetailContent() {
   const [editingTopic, setEditingTopic] = useState(null);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [questionFormTab, setQuestionFormTab] = useState('general'); // 'general' | 'code' | 'explanation'
+  const [expandedTab, setExpandedTab] = useState('explanation'); // 'explanation' | 'code'
   const [newQuestionForm, setNewQuestionForm] = useState({
     title: '',
     difficulty: 'Easy',
@@ -710,7 +711,10 @@ function TodoDetailContent() {
                     {/* Main Question Header Row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--list-item-bg)' }}>
                       <div 
-                        onClick={() => setExpandedQuestionId(isExpanded ? null : q.id)}
+                        onClick={() => {
+                          setExpandedQuestionId(isExpanded ? null : q.id);
+                          setExpandedTab('explanation');
+                        }}
                         style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, marginRight: '16px', cursor: 'pointer' }}
                       >
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '12px', textAlign: 'center' }}>
@@ -799,25 +803,72 @@ function TodoDetailContent() {
                           </div>
                         )}
 
-                        {q.explanation && (
-                          <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Explanation / Notes</span>
+                        {/* Tabs */}
+                        <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--card-border)', marginBottom: '4px', paddingBottom: '4px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedTab('explanation')}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '8px 4px',
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              color: expandedTab === 'explanation' ? '#0070f3' : 'var(--text-muted)',
+                              borderBottom: expandedTab === 'explanation' ? '2px solid #0070f3' : '2px solid transparent',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              marginBottom: '-6px'
+                            }}
+                          >
+                            Explanation
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedTab('code')}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '8px 4px',
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              color: expandedTab === 'code' ? '#0070f3' : 'var(--text-muted)',
+                              borderBottom: expandedTab === 'code' ? '2px solid #0070f3' : '2px solid transparent',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              marginBottom: '-6px'
+                            }}
+                          >
+                            Code
+                          </button>
+                        </div>
+
+                        {expandedTab === 'explanation' && (
+                          q.explanation ? (
+                            <div>
+                              <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: 'var(--text-color)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                                {q.explanation}
+                              </p>
                             </div>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: 'var(--text-color)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                              {q.explanation}
-                            </p>
-                          </div>
+                          ) : (
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '10px 0' }}>
+                              No explanation provided for this question.
+                            </div>
+                          )
                         )}
-                        {q.code && (
-                          <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Code Template</span>
+
+                        {expandedTab === 'code' && (
+                          q.code ? (
+                            <div>
+                              <pre style={{ margin: 0, padding: '12px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'monospace', overflowX: 'auto', border: '1px solid var(--card-border)', color: 'var(--text-color)' }}>
+                                <code>{q.code}</code>
+                              </pre>
                             </div>
-                            <pre style={{ margin: 0, padding: '12px', backgroundColor: 'var(--btn-secondary-bg)', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'monospace', overflowX: 'auto', border: '1px solid var(--card-border)', color: 'var(--text-color)' }}>
-                              <code>{q.code}</code>
-                            </pre>
-                          </div>
+                          ) : (
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '10px 0' }}>
+                              No code template provided for this question.
+                            </div>
+                          )
                         )}
                       </div>
                     )}
