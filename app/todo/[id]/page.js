@@ -14,6 +14,8 @@ const getDisplayDifficulty = (difficulty) => {
   return 'Easy';
 };
 
+const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
+
 function TodoDetailContent() {
   const { id: topicIdRaw } = useParams();
   const topicId = parseInt(topicIdRaw, 10);
@@ -502,9 +504,16 @@ function TodoDetailContent() {
   const pendingQs = topicQs.filter(q => !userTasks.some(t => t.item_type === 'question' && t.item_id === q.id && t.status === 'Completed'));
 
   const displayedQuestions = (() => {
-    if (questionFilter === 'completed') return completedQs;
-    if (questionFilter === 'pending') return pendingQs;
-    return topicQs;
+    let list = [];
+    if (questionFilter === 'completed') list = completedQs;
+    else if (questionFilter === 'pending') list = pendingQs;
+    else list = topicQs;
+
+    return [...list].sort((a, b) => {
+      const diffA = getDisplayDifficulty(a.difficulty);
+      const diffB = getDisplayDifficulty(b.difficulty);
+      return (difficultyOrder[diffA] || 1) - (difficultyOrder[diffB] || 1);
+    });
   })();
 
   return (
