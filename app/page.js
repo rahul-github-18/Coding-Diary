@@ -1747,6 +1747,117 @@ function DashboardContent({ searchQuery }) {
             </div>
           </div>
         )}
+
+        {/* Admin Reply Modal */}
+        {replyingQuery && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.65)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1100,
+              backdropFilter: 'blur(4px)',
+              padding: '20px'
+            }}
+          >
+            <div 
+              style={{
+                backgroundColor: 'var(--card-bg)',
+                border: '1px solid var(--card-border)',
+                borderRadius: '12px',
+                width: '100%',
+                maxWidth: '500px',
+                padding: '24px',
+                boxShadow: 'var(--card-shadow)',
+                position: 'relative',
+                textAlign: 'left'
+              }}
+            >
+              <button 
+                onClick={() => {
+                  setReplyingQuery(null);
+                  setReplyText('');
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '1.25rem'
+                }}
+              >
+                &times;
+              </button>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-heading)', margin: '0 0 16px 0' }}>
+                Reply to Query QRY-#{replyingQuery.id}
+              </h3>
+              {replyError && (
+                <div className="login-error" style={{ marginBottom: '12px' }}>{replyError}</div>
+              )}
+              
+              <div style={{ marginBottom: '16px' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700' }}>Student: @{replyingQuery.users?.username || 'unknown'}</span>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-color)', margin: '6px 0 0 0', padding: '10px', backgroundColor: 'var(--body-bg)', borderRadius: '6px', border: '1px solid var(--card-border)', maxHeight: '100px', overflowY: 'auto' }}>
+                  {replyingQuery.query_text}
+                </p>
+              </div>
+              
+              <form onSubmit={handleReplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                    Your Response
+                  </label>
+                  <textarea
+                    required
+                    rows={5}
+                    className="search-bar"
+                    placeholder="Type your reply here..."
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    style={{
+                      width: '100%',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      fontSize: '0.9rem',
+                      minHeight: '120px',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => {
+                      setReplyingQuery(null);
+                      setReplyText('');
+                    }}
+                    disabled={submittingReply}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    disabled={submittingReply}
+                  >
+                    {submittingReply ? 'Submitting...' : 'Submit Response'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -2464,119 +2575,6 @@ function DashboardContent({ searchQuery }) {
           </div>
         </div>
       )}
-
-      {/* Admin Reply Modal */}
-      {replyingQuery && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.65)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-            backdropFilter: 'blur(4px)',
-            padding: '20px'
-          }}
-        >
-          <div 
-            style={{
-              backgroundColor: 'var(--card-bg)',
-              border: '1px solid var(--card-border)',
-              borderRadius: '12px',
-              width: '100%',
-              maxWidth: '500px',
-              padding: '24px',
-              boxShadow: 'var(--card-shadow)',
-              position: 'relative',
-              textAlign: 'left'
-            }}
-          >
-            <button 
-              onClick={() => {
-                setReplyingQuery(null);
-                setReplyText('');
-              }}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '1.25rem'
-              }}
-            >
-              &times;
-            </button>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-heading)', margin: '0 0 16px 0' }}>
-              Reply to Query QRY-#{replyingQuery.id}
-            </h3>
-            {replyError && (
-              <div className="login-error" style={{ marginBottom: '12px' }}>{replyError}</div>
-            )}
-            
-            <div style={{ marginBottom: '16px' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700' }}>Student: @{replyingQuery.users?.username || 'unknown'}</span>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-color)', margin: '6px 0 0 0', padding: '10px', backgroundColor: 'var(--body-bg)', borderRadius: '6px', border: '1px solid var(--card-border)', maxHeight: '100px', overflowY: 'auto' }}>
-                {replyingQuery.query_text}
-              </p>
-            </div>
-            
-            <form onSubmit={handleReplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>
-                  Your Response
-                </label>
-                <textarea
-                  required
-                  rows={5}
-                  className="search-bar"
-                  placeholder="Type your reply here..."
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  style={{
-                    width: '100%',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    fontSize: '0.9rem',
-                    minHeight: '120px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => {
-                    setReplyingQuery(null);
-                    setReplyText('');
-                  }}
-                  disabled={submittingReply}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary" 
-                  disabled={submittingReply}
-                >
-                  {submittingReply ? 'Submitting...' : 'Submit Response'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Submission Feedback Modal handled in admin return block */}
     </div>
   );
 }
