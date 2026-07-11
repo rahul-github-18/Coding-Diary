@@ -395,13 +395,35 @@ function TodoDetailContent() {
 
       addText(topic.title.toUpperCase(), 16, true, [26, 115, 232], 6);
       addText(`Category: ${topic.category || 'General'} | Difficulty: ${topic.difficulty || 'Easy'}`, 10, false, [128, 128, 128], 4);
-      addText(`Made with ❤️ for learners by Rahul Ranjan | LinkedIn: https://www.linkedin.com/in/rahul-ranjan-6b2ab424a/`, 9, false, [100, 100, 100], 10);
+      
+      // Author details with a clickable LinkedIn link
+      const prefix = "Made with love for learners by Rahul Ranjan | ";
+      const linkText = "LinkedIn";
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      const prefixWidth = doc.getTextWidth(prefix);
+      const linkWidth = doc.getTextWidth(linkText);
+      const lineSpacing = 10;
+      
+      if (yPos + (9 * 0.4) + lineSpacing > pageHeight - margin) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setTextColor(100, 100, 100);
+      doc.text(prefix, margin, yPos);
+      
+      doc.setTextColor(26, 115, 232);
+      doc.text(linkText, margin + prefixWidth, yPos);
+      doc.link(margin + prefixWidth, yPos - 3, linkWidth, 4, { url: 'https://www.linkedin.com/in/rahul-ranjan-6b2ab424a/' });
+      
+      yPos += (9 * 0.4) + lineSpacing;
       
       doc.setDrawColor(200, 200, 200);
       doc.line(margin, yPos, pageWidth - margin, yPos);
       yPos += 10;
 
-      addText(`Questions (${questions.length})`, 13, true, [0, 0, 0], 8);
+      addText(`Total Questions: ${questions.length}`, 13, true, [0, 0, 0], 8);
 
       questions.forEach((q, idx) => {
         addText(`${idx + 1}. ${q.title}`, 11, true, [0, 0, 0], 4);
