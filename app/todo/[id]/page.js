@@ -604,8 +604,9 @@ function TodoDetailContent() {
               className="card"
               onClick={() => handleKPIFilterClick('completed')}
               style={{
-                flex: '0 1 220px',
-                padding: '12px 16px',
+                flex: 1,
+                minWidth: '150px',
+                padding: '20px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -615,17 +616,17 @@ function TodoDetailContent() {
                 backgroundColor: questionFilter === 'completed' ? 'rgba(56, 189, 248, 0.08)' : 'var(--card-bg)',
                 cursor: 'pointer',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                minHeight: '90px',
+                minHeight: '130px',
                 boxShadow: 'var(--card-shadow)'
               }}
             >
-              <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
                 Completed Questions
               </span>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: '900', color: '#10b981', margin: '2px 0' }}>
+              <h3 style={{ fontSize: '2.5rem', fontWeight: '900', color: '#10b981', margin: '4px 0' }}>
                 {completedQs.length}
               </h3>
-              <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: '600', marginTop: '2px' }}>
+              <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '600', marginTop: '4px' }}>
                 {questionFilter === 'completed' ? '● Filtering Active' : 'Filter completed'}
               </span>
             </div>
@@ -634,8 +635,9 @@ function TodoDetailContent() {
               className="card"
               onClick={() => handleKPIFilterClick('pending')}
               style={{
-                flex: '0 1 220px',
-                padding: '12px 16px',
+                flex: 1,
+                minWidth: '150px',
+                padding: '20px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -645,17 +647,17 @@ function TodoDetailContent() {
                 backgroundColor: questionFilter === 'pending' ? 'rgba(56, 189, 248, 0.08)' : 'var(--card-bg)',
                 cursor: 'pointer',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                minHeight: '90px',
+                minHeight: '130px',
                 boxShadow: 'var(--card-shadow)'
               }}
             >
-              <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
                 Pending Questions
               </span>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: '900', color: '#f59e0b', margin: '2px 0' }}>
+              <h3 style={{ fontSize: '2.5rem', fontWeight: '900', color: '#f59e0b', margin: '4px 0' }}>
                 {pendingQs.length}
               </h3>
-              <span style={{ fontSize: '0.65rem', color: '#f59e0b', fontWeight: '600', marginTop: '2px' }}>
+              <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: '600', marginTop: '4px' }}>
                 {questionFilter === 'pending' ? '● Filtering Active' : 'Filter pending'}
               </span>
             </div>
