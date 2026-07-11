@@ -1360,9 +1360,9 @@ function DashboardContent({ searchQuery }) {
             }}
           >
             Code Submissions
-            {adminSubmissions.length > 0 && (
+            {adminSubmissions.filter(s => !s.admin_reply).length > 0 && (
               <span style={{ backgroundColor: '#4f46e5', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '0.65rem' }}>
-                {adminSubmissions.length}
+                {adminSubmissions.filter(s => !s.admin_reply).length}
               </span>
             )}
           </span>
