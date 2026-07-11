@@ -20,6 +20,7 @@ function DashboardContent({ searchQuery }) {
   const [allQuestions, setAllQuestions] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [questionPage, setQuestionPage] = useState(0);
+  const [topicPage, setTopicPage] = useState(0);
   const [usersList, setUsersList] = useState([]);
   const [userTasks, setUserTasks] = useState([]);
   const [userStats, setUserStats] = useState({
@@ -78,6 +79,7 @@ function DashboardContent({ searchQuery }) {
         setUser(u);
         setQuestionFilter('all');
         setDashboardFilter('all');
+        setTopicPage(0);
         loadDashboardData(u);
       } catch (e) {
         localStorage.clear();
@@ -85,6 +87,10 @@ function DashboardContent({ searchQuery }) {
       }
     }
   }, [router, filter, searchParams]);
+
+  useEffect(() => {
+    setTopicPage(0);
+  }, [searchQuery]);
 
   const loadDashboardData = async (u) => {
     setLoading(true);
@@ -1373,7 +1379,7 @@ function DashboardContent({ searchQuery }) {
                 {groupedTasks.length === 0 ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No topics match search.</div>
                 ) : (
-                  groupedTasks.map((group) => {
+                  groupedTasks.slice(topicPage * 8, (topicPage + 1) * 8).map((group) => {
                     const isActive = selectedTopicId === group.id;
                     const qTotal = group.questions.length;
 
@@ -1412,6 +1418,30 @@ function DashboardContent({ searchQuery }) {
                   })
                 )}
               </div>
+
+              {groupedTasks.length > 8 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', borderTop: '1px solid var(--card-border)', paddingTop: '16px' }}>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setTopicPage(p => Math.max(0, p - 1))}
+                    disabled={topicPage === 0}
+                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                  >
+                    &larr; Prev
+                  </button>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {topicPage * 8 + 1} - {Math.min((topicPage + 1) * 8, groupedTasks.length)} of {groupedTasks.length}
+                  </span>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setTopicPage(p => ((p + 1) * 8 < groupedTasks.length ? p + 1 : p))}
+                    disabled={(topicPage + 1) * 8 >= groupedTasks.length}
+                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                  >
+                    Next &rarr;
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Right Side: Questions & Details for Selected Topic (Detail Panel) */}
