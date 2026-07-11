@@ -47,8 +47,18 @@ function QuestionDetailContent() {
     if (!isLoggedIn) {
       router.replace('/login');
     } else {
-      setAuthorized(true);
-      fetchQuestionDetails();
+      try {
+        const u = JSON.parse(localStorage.getItem('currentUser'));
+        if (u && (u.role === 'admin' || u.can_edit)) {
+          setAuthorized(true);
+          fetchQuestionDetails();
+        } else {
+          router.replace('/');
+        }
+      } catch (e) {
+        localStorage.clear();
+        router.replace('/login');
+      }
     }
   }, [questionId, router]);
 
