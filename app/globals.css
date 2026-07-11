@@ -192,6 +192,24 @@ body {
   gap: 12px;
 }
 
+.notification-dropdown {
+  position: absolute;
+  top: 42px;
+  right: -10px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  max-height: 400px;
+  overflow-y: auto;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  z-index: 1000;
+  padding: 8px 0;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
 .header-title {
   font-size: 1.75rem;
   font-weight: 700;
@@ -648,6 +666,16 @@ body {
   }
   .hide-on-mobile {
     display: none !important;
+  }
+  .notification-dropdown {
+    position: fixed !important;
+    top: 150px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: 320px !important;
+    max-width: calc(100vw - 32px) !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35) !important;
   }
   .app-container {
     flex-direction: row;

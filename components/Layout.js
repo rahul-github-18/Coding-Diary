@@ -479,25 +479,7 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
                               zIndex: 999
                             }}
                           />
-                          <div
-                            style={{
-                              position: 'absolute',
-                              top: '42px',
-                              right: '-10px',
-                              width: '320px',
-                              maxWidth: 'calc(100vw - 32px)',
-                              maxHeight: '400px',
-                              overflowY: 'auto',
-                              backgroundColor: 'var(--card-bg)',
-                              border: '1px solid var(--card-border)',
-                              borderRadius: '8px',
-                              boxShadow: 'var(--card-shadow)',
-                              zIndex: 1000,
-                              padding: '8px 0',
-                              backdropFilter: 'blur(16px)',
-                              WebkitBackdropFilter: 'blur(16px)'
-                            }}
-                          >
+                          <div className="notification-dropdown">
                             <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--card-border)', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--text-heading)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span>Support Notifications</span>
                               {unreadCount > 0 && <span style={{ fontSize: '0.75rem', color: '#ff4d4f', fontWeight: 'normal' }}>{unreadCount} unread</span>}
