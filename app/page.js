@@ -1330,60 +1330,60 @@ function DashboardContent({ searchQuery }) {
               return (
                 <>
                   <div 
+                    className="card"
                     onClick={() => setDashboardFilter(prev => prev === 'completed' ? 'all' : 'completed')}
                     style={{
-                      padding: '12px 18px',
-                      borderRadius: '8px',
-                      border: `1.5px solid ${dashboardFilter === 'completed' ? '#137333' : 'var(--card-border)'}`,
-                      backgroundColor: dashboardFilter === 'completed' ? 'rgba(19, 115, 51, 0.08)' : 'var(--card-bg)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
+                      padding: '24px',
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: '100px',
-                      boxShadow: 'var(--card-shadow)'
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      border: `1.5px solid ${dashboardFilter === 'completed' ? 'var(--link-color)' : 'var(--card-border)'}`,
+                      backgroundColor: dashboardFilter === 'completed' ? 'rgba(56, 189, 248, 0.08)' : 'var(--card-bg)',
+                      boxShadow: 'var(--card-shadow)',
+                      minHeight: '160px',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                     }}
                   >
-                    <div>
-                      <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Completed Topics
-                      </span>
-                      <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#137333', marginTop: '6px', marginBottom: '4px' }}>
-                        {completedTopicsCount}
-                      </h3>
-                    </div>
-                    <span style={{ fontSize: '0.65rem', color: '#137333', fontWeight: '600' }}>
-                      {dashboardFilter === 'completed' ? '● Filtering Active (Reset)' : 'Filter completed topics'}
+                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+                      Completed Topics
+                    </span>
+                    <h3 style={{ fontSize: '3rem', fontWeight: '900', color: '#10b981', margin: '4px 0' }}>
+                      {completedTopicsCount}
+                    </h3>
+                    <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '600', marginTop: '6px' }}>
+                      {dashboardFilter === 'completed' ? '● Filtering Active' : 'Filter completed topics'}
                     </span>
                   </div>
 
                   <div 
+                    className="card"
                     onClick={() => setDashboardFilter(prev => prev === 'pending' ? 'all' : 'pending')}
                     style={{
-                      padding: '12px 18px',
-                      borderRadius: '8px',
-                      border: `1.5px solid ${dashboardFilter === 'pending' ? '#b06000' : 'var(--card-border)'}`,
-                      backgroundColor: dashboardFilter === 'pending' ? 'rgba(176, 96, 0, 0.08)' : 'var(--card-bg)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
+                      padding: '24px',
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: '100px',
-                      boxShadow: 'var(--card-shadow)'
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      border: `1.5px solid ${dashboardFilter === 'pending' ? 'var(--link-color)' : 'var(--card-border)'}`,
+                      backgroundColor: dashboardFilter === 'pending' ? 'rgba(56, 189, 248, 0.08)' : 'var(--card-bg)',
+                      boxShadow: 'var(--card-shadow)',
+                      minHeight: '160px',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                     }}
                   >
-                    <div>
-                      <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Pending Topics
-                      </span>
-                      <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#b06000', marginTop: '6px', marginBottom: '4px' }}>
-                        {pendingTopicsCount}
-                      </h3>
-                    </div>
-                    <span style={{ fontSize: '0.65rem', color: '#b06000', fontWeight: '600' }}>
-                      {dashboardFilter === 'pending' ? '● Filtering Active (Reset)' : 'Filter pending topics'}
+                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+                      Pending Topics
+                    </span>
+                    <h3 style={{ fontSize: '3rem', fontWeight: '900', color: '#f59e0b', margin: '4px 0' }}>
+                      {pendingTopicsCount}
+                    </h3>
+                    <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: '600', marginTop: '6px' }}>
+                      {dashboardFilter === 'pending' ? '● Filtering Active' : 'Filter pending topics'}
                     </span>
                   </div>
                 </>
