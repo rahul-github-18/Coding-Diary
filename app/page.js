@@ -19,7 +19,8 @@ function DashboardContent({ searchQuery }) {
   const [topics, setTopics] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [questionPage, setQuestionPage] = useState(0);
-  const [topicPage, setTopicPage] = useState(0);
+  const [visibleCurriculumCount, setVisibleCurriculumCount] = useState(8);
+  const [visibleAdminCount, setVisibleAdminCount] = useState(8);
   const [usersList, setUsersList] = useState([]);
   const [userTasks, setUserTasks] = useState([]);
   const [userStats, setUserStats] = useState({
@@ -88,16 +89,18 @@ function DashboardContent({ searchQuery }) {
   }, [router, filter, searchParams]);
 
   useEffect(() => {
-    setTopicPage(0);
+    setVisibleCurriculumCount(8);
+    setVisibleAdminCount(8);
   }, [searchQuery]);
 
   useEffect(() => {
     if (topics && topics.length > 0) {
-      topics.slice(topicPage * 8, (topicPage + 1) * 8).forEach(topic => {
+      const maxVisible = Math.max(visibleCurriculumCount, visibleAdminCount);
+      topics.slice(0, maxVisible).forEach(topic => {
         router.prefetch(`/todo/${topic.id}`);
       });
     }
-  }, [topics, topicPage, router]);
+  }, [topics, visibleCurriculumCount, visibleAdminCount, router]);
 
   const loadDashboardData = async (u) => {
     setLoading(true);
@@ -1125,7 +1128,7 @@ function DashboardContent({ searchQuery }) {
             Curriculum Topics
           </h3>
           <div className="todos-grid">
-            {filteredTopics.map((topic) => (
+            {filteredTopics.slice(0, visibleAdminCount).map((topic) => (
               <div key={topic.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -1154,6 +1157,36 @@ function DashboardContent({ searchQuery }) {
               </div>
             ))}
           </div>
+
+          {filteredTopics.length > visibleAdminCount && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setVisibleAdminCount(prev => prev + 8)}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  padding: '10px 24px', 
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  borderRadius: '30px',
+                  border: '1px solid var(--card-border)',
+                  backgroundColor: 'var(--card-bg)',
+                  boxShadow: 'var(--card-shadow)',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(1px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <span>View More</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1204,7 +1237,7 @@ function DashboardContent({ searchQuery }) {
             {groupedTasks.length === 0 ? (
               <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No topics match search.</div>
             ) : (
-              groupedTasks.slice(topicPage * 8, (topicPage + 1) * 8).map((group) => {
+              groupedTasks.slice(0, visibleCurriculumCount).map((group) => {
                 const qTotal = group.total_questions || 0;
                 return (
                   <div 
@@ -1256,27 +1289,33 @@ function DashboardContent({ searchQuery }) {
               })
             )}
           </div>
-
-          {groupedTasks.length > 8 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', borderTop: '1px solid var(--card-border)', paddingTop: '16px' }}>
+ 
+           {groupedTasks.length > visibleCurriculumCount && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
               <button 
                 className="btn btn-secondary" 
-                onClick={() => setTopicPage(p => Math.max(0, p - 1))}
-                disabled={topicPage === 0}
-                style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                onClick={() => setVisibleCurriculumCount(prev => prev + 8)}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  padding: '10px 24px', 
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  borderRadius: '30px',
+                  border: '1px solid var(--card-border)',
+                  backgroundColor: 'var(--card-bg)',
+                  boxShadow: 'var(--card-shadow)',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(1px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
-                &larr; Prev
-              </button>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Showing {topicPage * 8 + 1} - {Math.min((topicPage + 1) * 8, groupedTasks.length)} of {groupedTasks.length} Topics
-              </span>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setTopicPage(p => ((p + 1) * 8 < groupedTasks.length ? p + 1 : p))}
-                disabled={(topicPage + 1) * 8 >= groupedTasks.length}
-                style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-              >
-                Next &rarr;
+                <span>View More</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
               </button>
             </div>
           )}
