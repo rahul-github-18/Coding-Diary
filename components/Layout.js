@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import Sidebar from './Sidebar';
 import { generateNotesPDF } from '@/lib/pdfExport';
 import { userQueryService } from '@/lib/api';
 
