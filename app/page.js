@@ -79,7 +79,8 @@ function DashboardContent({ searchQuery }) {
         setUser(u);
         setQuestionFilter('all');
         setDashboardFilter('all');
-        setTopicPage(0);
+        setVisibleCurriculumCount(8);
+        setVisibleAdminCount(8);
         loadDashboardData(u);
       } catch (e) {
         localStorage.clear();
