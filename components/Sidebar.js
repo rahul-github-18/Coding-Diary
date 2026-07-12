@@ -138,6 +138,17 @@ const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme, isOpen, onClose })
             Curriculum
           </div>
         </li>
+              <li>
+  <a
+    href="https://kodediaryide.vercel.app/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="sidebar-link"
+    onClick={onClose}
+  >
+    Code Editor
+  </a>
+</li>
 
         <li>
           <div
