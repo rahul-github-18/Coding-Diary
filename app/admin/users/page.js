@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/Layout';
-import { userService } from '@/lib/api';
+import { userService, adminLoginHistoryService } from '@/lib/api';
 
 function UserManagementContent() {
   const [user, setUser] = useState(null);
@@ -12,7 +12,30 @@ function UserManagementContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [loginHistory, setLoginHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const router = useRouter();
+
+  const fetchLoginHistory = async (uId) => {
+    if (!uId) return;
+    setLoadingHistory(true);
+    try {
+      const history = await adminLoginHistoryService.getLoginHistory(uId);
+      setLoginHistory(history || []);
+    } catch (err) {
+      console.error('Failed to load login history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedUserId) {
+      fetchLoginHistory(selectedUserId);
+    } else {
+      setLoginHistory([]);
+    }
+  }, [selectedUserId]);
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -398,6 +421,94 @@ function UserManagementContent() {
           </div>
         )}
       </div>
+
+      {/* Login Activity Card */}
+      {selectedUser && (
+        <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', minHeight: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-heading)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🕒</span> Login Activity: <span style={{ color: 'var(--link-color)' }}>{selectedUser.username}</span>
+            </h3>
+            <button 
+              className="btn btn-secondary" 
+              style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+              onClick={() => fetchLoginHistory(selectedUserId)}
+              disabled={loadingHistory}
+            >
+              {loadingHistory ? 'Refreshing...' : '🔄 Refresh Log'}
+            </button>
+          </div>
+
+          {loadingHistory ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading activity logs...</div>
+          ) : loginHistory.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', border: '1px dashed var(--card-border)', borderRadius: '6px' }}>
+              No login activity recorded for this user yet.
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto', border: '1px solid var(--card-border)', borderRadius: '6px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--btn-secondary-bg)', borderBottom: '1px solid var(--card-border)' }}>
+                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-heading)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Login Time</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-heading)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>IP Address</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-heading)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Browser / OS Device</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loginHistory.map((item) => {
+                    const getFriendlyUA = (ua) => {
+                      if (!ua) return 'Unknown Device';
+                      if (ua.includes('Firefox')) {
+                        const match = ua.match(/Firefox\/([0-9.]+)/);
+                        return `Firefox (${match ? match[1] : 'Unknown Version'})`;
+                      }
+                      if (ua.includes('Chrome') && ua.includes('Safari')) {
+                        const match = ua.match(/Chrome\/([0-9.]+)/);
+                        return `Chrome (${match ? match[1] : 'Unknown Version'})`;
+                      }
+                      if (ua.includes('Safari') && !ua.includes('Chrome')) {
+                        const match = ua.match(/Version\/([0-9.]+)/);
+                        return `Safari (${match ? match[1] : 'Unknown Version'})`;
+                      }
+                      if (ua.includes('Postman')) return 'Postman API Client';
+                      
+                      // Try simple parse
+                      const parts = ua.split(' ');
+                      if (parts.length > 0) {
+                        const lastPart = parts[parts.length - 1];
+                        if (lastPart.includes('/')) return lastPart;
+                      }
+                      return ua.length > 40 ? ua.substring(0, 40) + '...' : ua;
+                    };
+
+                    return (
+                      <tr key={item.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background-color 0.15s ease' }}>
+                        <td style={{ padding: '12px 16px', fontSize: '0.85rem', color: 'var(--text-color)' }}>
+                          {new Date(item.login_at).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '0.85rem', color: 'var(--text-color)', fontFamily: 'monospace', fontWeight: '600' }}>
+                          {item.ip_address}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '0.85rem', color: 'var(--text-muted)' }} title={item.user_agent}>
+                          {getFriendlyUA(item.user_agent)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

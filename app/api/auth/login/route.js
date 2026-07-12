@@ -40,6 +40,22 @@ export async function POST(req) {
 
     // Success - return user without password
     const { password: _, ...userWithoutPassword } = user;
+
+    // Log login activity asynchronously but wait or handle safely
+    try {
+      const userAgent = req.headers.get('user-agent') || 'Unknown';
+      const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'Unknown';
+      await supabase
+        .from('login_history')
+        .insert({
+          user_id: user.id,
+          ip_address: ip,
+          user_agent: userAgent
+        });
+    } catch (logError) {
+      console.error('Failed to log login history:', logError);
+    }
+
     console.timeEnd('API: POST /api/auth/login');
     return NextResponse.json(userWithoutPassword);
   } catch (error) {

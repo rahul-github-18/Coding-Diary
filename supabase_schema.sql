@@ -12,6 +12,7 @@
 -- ALTER TABLE shared_codes DISABLE ROW LEVEL SECURITY;
 -- ALTER TABLE user_queries DISABLE ROW LEVEL SECURITY;
 -- ALTER TABLE user_submissions DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE login_history DISABLE ROW LEVEL SECURITY;
 
 -- 1. Create users table
 CREATE TABLE IF NOT EXISTS users (
@@ -158,3 +159,13 @@ CREATE TABLE IF NOT EXISTS user_submissions (
 -- ALTER TABLE user_submissions ADD COLUMN IF NOT EXISTS is_read_by_user BOOLEAN DEFAULT true;
 -- ALTER TABLE user_submissions ADD COLUMN IF NOT EXISTS replied_at TIMESTAMP DEFAULT NULL;
 
+-- 11. Create login_history table
+CREATE TABLE IF NOT EXISTS login_history (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  login_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  ip_address VARCHAR(45) DEFAULT NULL,
+  user_agent TEXT DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_history_user_id ON login_history(user_id);
