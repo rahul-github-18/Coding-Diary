@@ -330,7 +330,6 @@ const Layout = ({ children, searchQuery, setSearchQuery }) => {
 
               <a
                 href="https://kodediaryide.vercel.app/"
-                target="_blank"
                 rel="noopener noreferrer"
                 className="desktop-nav-link"
                 style={{
