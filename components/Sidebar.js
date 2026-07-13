@@ -142,7 +142,6 @@ const Sidebar = memo(({ onExportPDF, isDarkMode, toggleTheme, isOpen, onClose })
         <li>
           <a
             href="https://kodediaryide.vercel.app/"
-            target="_blank"
             rel="noopener noreferrer"
             className="sidebar-link"
             onClick={onClose}
