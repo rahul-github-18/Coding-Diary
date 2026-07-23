@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/Layout';
 import Editor from './components/Editor';
@@ -8,15 +8,15 @@ import Settings from './components/Settings';
 
 const STARTER_CODES = {
   javascript: `// JavaScript Playground\n// You can use standard JavaScript and console.log for output\n\nfunction fibonacci(n) {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nconst num = 10;\nconsole.log(\`Fibonacci number at position \${num} is: \${fibonacci(num)}\`);\n`,
-  python: `# Python 3 Playground\n# You can use standard Python print() for output\n\ndef fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n - 1) + fibonacci(n - 2)\n\nnum = 10\nprint(f"Fibonacci number at position {num} is: {fibonacci(num)}")\n`,
-  cpp: `// C++ Playground\n#include <iostream>\nusing namespace std;\n\nint fibonacci(int n) {\n    if (n <= 1) return n;\n    return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nint main() {\n    int num = 10;\n    cout << "Fibonacci number at position " << num << " is: " << fibonacci(num) << endl;\n    return 0;\n}\n`,
-  c: `// C Playground\n#include <stdio.h>\n\nint fibonacci(int n) {\n    if (n <= 1) return n;\n    return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nint main() {\n    int num = 10;\n    printf("Fibonacci number at position %d is: %d\\n", num, fibonacci(num));\n    return 0;\n}\n`,
-  java: `// Java Playground\nimport java.util.*;\n\nclass Main {\n    public static int fibonacci(int n) {\n        if (n <= 1) return n;\n        return fibonacci(n - 1) + fibonacci(n - 2);\n    }\n\n    public static void main(String[] args) {\n        int num = 10;\n        System.out.println("Fibonacci number at position " + num + " is: " + fibonacci(num));\n    }\n}\n`,
+  python: `# Python 3 Playground\n# You can use standard Python input() and print()\n\nname = input("Enter your name: ") if 'input' in globals() else "Developer"\nprint(f"Hello, {name}! Welcome to Code Diary IDE.")\n`,
+  cpp: `// C++ Playground\n#include <iostream>\nusing namespace std;\n\nint main() {\n    int a = 0, b = 0;\n    cout << "Enter two numbers: ";\n    if (cin >> a >> b) {\n        cout << "Sum = " << (a + b) << endl;\n    } else {\n        cout << "Hello from C++!" << endl;\n    }\n    return 0;\n}\n`,
+  c: `// C Playground\n#include <stdio.h>\n\nint main() {\n    int a = 0, b = 0;\n    printf("Enter two numbers: ");\n    if (scanf("%d %d", &a, &b) == 2) {\n        printf("Sum = %d\\n", a + b);\n    } else {\n        printf("Hello from C!\\n");\n    }\n    return 0;\n}\n`,
+  java: `// Java Playground\nimport java.util.*;\n\nclass Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.println("Enter two numbers:");\n        if (sc.hasNextInt()) {\n            int a = sc.nextInt();\n            int b = sc.nextInt();\n            System.out.println("Sum = " + (a + b));\n        } else {\n            System.out.println("Hello from Java!");\n        }\n    }\n}\n`,
   typescript: `// TypeScript Playground\nfunction fibonacci(n: number): number {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nconst num: number = 10;\nconsole.log(\`Fibonacci number at position \${num} is: \${fibonacci(num)}\`);\n`,
-  go: `// Go Playground\npackage main\nimport "fmt"\n\nfunc fibonacci(n int) int {\n\tif n <= 1 {\n\t\treturn n\n\t}\n\treturn fibonacci(n-1) + fibonacci(n-2)\n}\n\nfunc main() {\n\tnum := 10\n\tfmt.Printf("Fibonacci number at position %d is: %d\\n", num, fibonacci(num))\n}\n`,
-  rust: `// Rust Playground\nfn fibonacci(n: u32) -> u32 {\n    if n <= 1 { return n; }\n    fibonacci(n - 1) + fibonacci(n - 2)\n}\n\nfn main() {\n    let num = 10;\n    println!("Fibonacci number at position {} is: {}", num, fibonacci(num));\n}\n`,
-  ruby: `# Ruby Playground\ndef fibonacci(n)\n  return n if n <= 1\n  fibonacci(n - 1) + fibonacci(n - 2)\nend\n\nnum = 10\nputs "Fibonacci number at position #{num} is: #{fibonacci(num)}"\n`,
-  php: `<?php\n// PHP Playground\nfunction fibonacci($n) {\n    if ($n <= 1) return $n;\n    return fibonacci($n - 1) + fibonacci($n - 2);\n}\n\n$num = 10;\necho "Fibonacci number at position {$num} is: " . fibonacci($num) . "\\n";\n`,
+  go: `// Go Playground\npackage main\nimport "fmt"\n\nfunc main() {\n\tvar a, b int\n\tfmt.Println("Enter two numbers:")\n\tn, _ := fmt.Scanf("%d %d", &a, &b)\n\tif n == 2 {\n\t\tfmt.Printf("Sum = %d\\n", a+b)\n\t} else {\n\t\tfmt.Println("Hello from Go!")\n\t}\n}\n`,
+  rust: `// Rust Playground\nfn main() {\n    println!("Hello from Rust!");\n}\n`,
+  ruby: `# Ruby Playground\nputs "Hello from Ruby!"\n`,
+  php: `<?php\n// PHP Playground\necho "Hello from PHP!\\n";\n`,
   sql: `-- SQL Playground\nCREATE TABLE developers (\n  id INT PRIMARY KEY,\n  name VARCHAR(50),\n  role VARCHAR(50)\n);\n\nINSERT INTO developers VALUES (1, 'Alice', 'Frontend'), (2, 'Bob', 'Backend');\n\nSELECT * FROM developers;\n`
 };
 
@@ -40,10 +40,13 @@ function CodeEditorContent() {
   const [language, setLanguage] = useState('javascript');
   const [code, setCode] = useState(STARTER_CODES.javascript);
   const [stdin, setStdin] = useState('');
+  const [consoleInput, setConsoleInput] = useState('');
   const [output, setOutput] = useState('');
   const [executionError, setExecutionError] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [executionTime, setExecutionTime] = useState(null);
+  
+  const consoleInputRef = useRef(null);
 
   // Modals
   const [showSettings, setShowSettings] = useState(false);
@@ -69,17 +72,19 @@ function CodeEditorContent() {
     setOutput('');
     setExecutionError('');
     setExecutionTime(null);
+    setConsoleInput('');
   };
 
   const handleReset = () => {
     setCode(STARTER_CODES[language] || '');
     setStdin('');
+    setConsoleInput('');
     setOutput('');
     setExecutionError('');
     setExecutionTime(null);
   };
 
-  const runCodeLocalJS = () => {
+  const runCodeLocalJS = (targetStdin = stdin) => {
     const startTime = performance.now();
     let logs = [];
     const customConsole = {
@@ -91,7 +96,7 @@ function CodeEditorContent() {
 
     try {
       const runFn = new Function('console', 'stdin', code);
-      runFn(customConsole, stdin);
+      runFn(customConsole, targetStdin);
       const endTime = performance.now();
       setOutput(logs.join('\n') || "(Program executed successfully with no output)");
       setExecutionError('');
@@ -106,7 +111,8 @@ function CodeEditorContent() {
     }
   };
 
-  const handleRunCode = async () => {
+  const handleRunCode = async (overrideStdin = null) => {
+    const activeStdin = overrideStdin !== null ? overrideStdin : stdin;
     setIsRunning(true);
     setOutput('');
     setExecutionError('');
@@ -115,7 +121,7 @@ function CodeEditorContent() {
     // If JavaScript or TypeScript local execution
     if (language === 'javascript' || language === 'typescript') {
       setTimeout(() => {
-        runCodeLocalJS();
+        runCodeLocalJS(activeStdin);
       }, 100);
       return;
     }
@@ -137,7 +143,7 @@ function CodeEditorContent() {
         body: JSON.stringify({
           compiler: compiler,
           code: codeToSubmit,
-          stdin: stdin
+          stdin: activeStdin
         })
       });
 
@@ -167,6 +173,15 @@ function CodeEditorContent() {
     } finally {
       setIsRunning(false);
     }
+  };
+
+  const handleConsoleInputSubmit = (e) => {
+    e.preventDefault();
+    if (!consoleInput.trim() && !stdin.trim()) return;
+    const submittedInput = consoleInput;
+    setStdin(submittedInput);
+    setConsoleInput('');
+    handleRunCode(submittedInput);
   };
 
   return (
@@ -221,7 +236,7 @@ function CodeEditorContent() {
             </button>
 
             <button
-              onClick={handleRunCode}
+              onClick={() => handleRunCode()}
               disabled={isRunning}
               className="btn btn-primary"
               style={{ padding: '8px 20px', fontWeight: '700', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -262,7 +277,7 @@ function CodeEditorContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', minHeight: 0 }}>
             
             {/* Top Right: Standard Input (STDIN) */}
-            <div className="card" style={{ flex: '0 0 40%', padding: '16px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div className="card" style={{ flex: '0 0 35%', padding: '16px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--link-color)' }}>
                   <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
@@ -281,7 +296,7 @@ function CodeEditorContent() {
               />
             </div>
 
-            {/* Bottom Right: Output Console */}
+            {/* Bottom Right: Output Console + Interactive Terminal Input */}
             <div className="card" style={{ flex: 1, padding: '16px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -300,7 +315,7 @@ function CodeEditorContent() {
                 </div>
                 {(output || executionError) && (
                   <button
-                    onClick={() => { setOutput(''); setExecutionError(''); setExecutionTime(null); }}
+                    onClick={() => { setOutput(''); setExecutionError(''); setExecutionTime(null); setConsoleInput(''); }}
                     className="btn btn-secondary"
                     style={{ padding: '3px 10px', fontSize: '0.75rem', fontWeight: '600' }}
                   >
@@ -309,7 +324,13 @@ function CodeEditorContent() {
                 )}
               </div>
 
+              {/* Terminal Logs View */}
               <div style={{ flex: 1, overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {stdin && output && (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '6px' }}>
+                    &gt; Executed with input: <span style={{ color: 'var(--link-color)', fontWeight: 'bold' }}>{stdin}</span>
+                  </div>
+                )}
                 {output && <div style={{ color: 'var(--text-color)' }}>{output}</div>}
                 {executionError && (
                   <div style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
@@ -318,10 +339,49 @@ function CodeEditorContent() {
                 )}
                 {!output && !executionError && !isRunning && (
                   <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                    Click "Run Code" to compile and execute.
+                    Click "Run Code" or type input below and press Enter to execute.
                   </div>
                 )}
               </div>
+
+              {/* Interactive Output Console Input Prompt Bar */}
+              <form
+                onSubmit={handleConsoleInputSubmit}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginTop: '10px',
+                  paddingTop: '8px',
+                  borderTop: '1px solid var(--card-border)'
+                }}
+              >
+                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--link-color)', fontSize: '0.9rem' }}>&gt;</span>
+                <input
+                  ref={consoleInputRef}
+                  type="text"
+                  className="form-input"
+                  value={consoleInput}
+                  onChange={(e) => setConsoleInput(e.target.value)}
+                  placeholder={stdin ? `Interactive input (current: "${stdin}") — press Enter to re-run...` : "Enter input here and press Enter to execute..."}
+                  style={{
+                    flex: 1,
+                    fontFamily: 'monospace',
+                    fontSize: '0.85rem',
+                    padding: '6px 12px',
+                    borderRadius: '8px'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={isRunning}
+                  className="btn btn-primary"
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: '600', whiteSpace: 'nowrap' }}
+                >
+                  Send Input
+                </button>
+              </form>
+
             </div>
 
           </div>
