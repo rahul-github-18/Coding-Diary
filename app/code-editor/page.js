@@ -8,12 +8,12 @@ import Settings from './components/Settings';
 
 const STARTER_CODES = {
   javascript: `// JavaScript Playground\n// You can use standard JavaScript and console.log for output\n\nfunction fibonacci(n) {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nconst num = 10;\nconsole.log(\`Fibonacci number at position \${num} is: \${fibonacci(num)}\`);\n`,
-  python: `# Python 3 Playground\n# You can use standard Python input() and print()\n\nname = input("Enter your name: ") if 'input' in globals() else "Developer"\nprint(f"Hello, {name}! Welcome to Code Diary IDE.")\n`,
-  cpp: `// C++ Playground\n#include <iostream>\nusing namespace std;\n\nint main() {\n    int a = 0, b = 0;\n    cout << "Enter two numbers: ";\n    if (cin >> a >> b) {\n        cout << "Sum = " << (a + b) << endl;\n    } else {\n        cout << "Hello from C++!" << endl;\n    }\n    return 0;\n}\n`,
-  c: `// C Playground\n#include <stdio.h>\n\nint main() {\n    int a = 0, b = 0;\n    printf("Enter two numbers: ");\n    if (scanf("%d %d", &a, &b) == 2) {\n        printf("Sum = %d\\n", a + b);\n    } else {\n        printf("Hello from C!\\n");\n    }\n    return 0;\n}\n`,
-  java: `// Java Playground\nimport java.util.*;\n\nclass Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.println("Enter two numbers:");\n        if (sc.hasNextInt()) {\n            int a = sc.nextInt();\n            int b = sc.nextInt();\n            System.out.println("Sum = " + (a + b));\n        } else {\n            System.out.println("Hello from Java!");\n        }\n    }\n}\n`,
+  python: `# Python 3 Playground\nimport sys\n\n# Enter input below in the terminal bar if your program asks for input\nprint("Hello from Python 3!")\n`,
+  cpp: `// C++ Playground\n#include <iostream>\nusing namespace std;\n\nint main() {\n    int a = 0, b = 0;\n    if (cin >> a >> b) {\n        cout << "Sum = " << (a + b) << endl;\n    } else {\n        cout << "Hello from C++! (Provide inputs like: 10 20 below)" << endl;\n    }\n    return 0;\n}\n`,
+  c: `// C Playground\n#include <stdio.h>\n\nint main() {\n    int a = 0, b = 0;\n    if (scanf("%d %d", &a, &b) == 2) {\n        printf("Sum = %d\\n", a + b);\n    } else {\n        printf("Hello from C! (Provide inputs like: 10 20 below)\\n");\n    }\n    return 0;\n}\n`,
+  java: `// Java Playground\nimport java.util.*;\n\nclass Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int a = sc.nextInt();\n            int b = sc.nextInt();\n            System.out.println("Sum = " + (a + b));\n        } else {\n            System.out.println("Hello from Java! (Provide inputs like: 10 20 below)");\n        }\n    }\n}\n`,
   typescript: `// TypeScript Playground\nfunction fibonacci(n: number): number {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nconst num: number = 10;\nconsole.log(\`Fibonacci number at position \${num} is: \${fibonacci(num)}\`);\n`,
-  go: `// Go Playground\npackage main\nimport "fmt"\n\nfunc main() {\n\tvar a, b int\n\tfmt.Println("Enter two numbers:")\n\tn, _ := fmt.Scanf("%d %d", &a, &b)\n\tif n == 2 {\n\t\tfmt.Printf("Sum = %d\\n", a+b)\n\t} else {\n\t\tfmt.Println("Hello from Go!")\n\t}\n}\n`,
+  go: `// Go Playground\npackage main\nimport "fmt"\n\nfunc main() {\n\tvar a, b int\n\tn, _ := fmt.Scanf("%d %d", &a, &b)\n\tif n == 2 {\n\t\tfmt.Printf("Sum = %d\\n", a+b)\n\t} else {\n\t\tfmt.Println("Hello from Go!")\n\t}\n}\n`,
   rust: `// Rust Playground\nfn main() {\n    println!("Hello from Rust!");\n}\n`,
   ruby: `# Ruby Playground\nputs "Hello from Ruby!"\n`,
   php: `<?php\n// PHP Playground\necho "Hello from PHP!\\n";\n`,
@@ -45,8 +45,6 @@ function CodeEditorContent() {
   const [executionError, setExecutionError] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [executionTime, setExecutionTime] = useState(null);
-  
-  const consoleInputRef = useRef(null);
 
   // Modals
   const [showSettings, setShowSettings] = useState(false);
@@ -73,6 +71,7 @@ function CodeEditorContent() {
     setExecutionError('');
     setExecutionTime(null);
     setConsoleInput('');
+    setStdin('');
   };
 
   const handleReset = () => {
@@ -177,11 +176,9 @@ function CodeEditorContent() {
 
   const handleConsoleInputSubmit = (e) => {
     e.preventDefault();
-    if (!consoleInput.trim() && !stdin.trim()) return;
-    const submittedInput = consoleInput;
-    setStdin(submittedInput);
-    setConsoleInput('');
-    handleRunCode(submittedInput);
+    const inputToUse = consoleInput;
+    setStdin(inputToUse);
+    handleRunCode(inputToUse);
   };
 
   return (
@@ -273,116 +270,85 @@ function CodeEditorContent() {
             />
           </div>
 
-          {/* Right Side: Split into STDIN (Top) and OUTPUT CONSOLE (Bottom) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', minHeight: 0 }}>
-            
-            {/* Top Right: Standard Input (STDIN) */}
-            <div className="card" style={{ flex: '0 0 35%', padding: '16px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>
+          {/* Right Side: Full Height OUTPUT CONSOLE with Integrated Terminal Input Bar */}
+          <div className="card" style={{ height: '100%', padding: '16px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--link-color)' }}>
-                  <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
-                  <line x1="6" y1="12" x2="10" y2="12"></line>
+                  <polyline points="4 17 10 11 4 5"></polyline>
+                  <line x1="12" y1="19" x2="20" y2="19"></line>
                 </svg>
                 <h3 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0, color: 'var(--text-heading)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  STANDARD INPUT (STDIN)
+                  OUTPUT CONSOLE
                 </h3>
-              </div>
-              <textarea
-                className="form-input"
-                value={stdin}
-                onChange={(e) => setStdin(e.target.value)}
-                placeholder="Provide arguments/input to feed into your program here..."
-                style={{ flex: 1, width: '100%', fontFamily: 'monospace', fontSize: '0.85rem', resize: 'none', border: 'none', background: 'transparent', padding: '4px' }}
-              />
-            </div>
-
-            {/* Bottom Right: Output Console + Interactive Terminal Input */}
-            <div className="card" style={{ flex: 1, padding: '16px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--link-color)' }}>
-                    <polyline points="4 17 10 11 4 5"></polyline>
-                    <line x1="12" y1="19" x2="20" y2="19"></line>
-                  </svg>
-                  <h3 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0, color: 'var(--text-heading)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    OUTPUT CONSOLE
-                  </h3>
-                  {executionTime && (
-                    <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
-                      {executionTime} ms
-                    </span>
-                  )}
-                </div>
-                {(output || executionError) && (
-                  <button
-                    onClick={() => { setOutput(''); setExecutionError(''); setExecutionTime(null); setConsoleInput(''); }}
-                    className="btn btn-secondary"
-                    style={{ padding: '3px 10px', fontSize: '0.75rem', fontWeight: '600' }}
-                  >
-                    Clear
-                  </button>
+                {executionTime && (
+                  <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
+                    {executionTime} ms
+                  </span>
                 )}
               </div>
-
-              {/* Terminal Logs View */}
-              <div style={{ flex: 1, overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                {stdin && output && (
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '6px' }}>
-                    &gt; Executed with input: <span style={{ color: 'var(--link-color)', fontWeight: 'bold' }}>{stdin}</span>
-                  </div>
-                )}
-                {output && <div style={{ color: 'var(--text-color)' }}>{output}</div>}
-                {executionError && (
-                  <div style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                    {executionError}
-                  </div>
-                )}
-                {!output && !executionError && !isRunning && (
-                  <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                    Click "Run Code" or type input below and press Enter to execute.
-                  </div>
-                )}
-              </div>
-
-              {/* Interactive Output Console Input Prompt Bar */}
-              <form
-                onSubmit={handleConsoleInputSubmit}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginTop: '10px',
-                  paddingTop: '8px',
-                  borderTop: '1px solid var(--card-border)'
-                }}
-              >
-                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--link-color)', fontSize: '0.9rem' }}>&gt;</span>
-                <input
-                  ref={consoleInputRef}
-                  type="text"
-                  className="form-input"
-                  value={consoleInput}
-                  onChange={(e) => setConsoleInput(e.target.value)}
-                  placeholder={stdin ? `Interactive input (current: "${stdin}") — press Enter to re-run...` : "Enter input here and press Enter to execute..."}
-                  style={{
-                    flex: 1,
-                    fontFamily: 'monospace',
-                    fontSize: '0.85rem',
-                    padding: '6px 12px',
-                    borderRadius: '8px'
-                  }}
-                />
+              {(output || executionError) && (
                 <button
-                  type="submit"
-                  disabled={isRunning}
-                  className="btn btn-primary"
-                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: '600', whiteSpace: 'nowrap' }}
+                  onClick={() => { setOutput(''); setExecutionError(''); setExecutionTime(null); setConsoleInput(''); setStdin(''); }}
+                  className="btn btn-secondary"
+                  style={{ padding: '3px 10px', fontSize: '0.75rem', fontWeight: '600' }}
                 >
-                  Send Input
+                  Clear
                 </button>
-              </form>
-
+              )}
             </div>
+
+            {/* Console Terminal Log Display */}
+            <div style={{ flex: 1, overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {output && <div style={{ color: 'var(--text-color)' }}>{output}</div>}
+              {executionError && (
+                <div style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  {executionError}
+                </div>
+              )}
+              {!output && !executionError && !isRunning && (
+                <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                  Click "Run Code" or type input below and press Enter to execute.
+                </div>
+              )}
+            </div>
+
+            {/* Interactive Output Console Input Prompt */}
+            <form
+              onSubmit={handleConsoleInputSubmit}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginTop: '10px',
+                paddingTop: '8px',
+                borderTop: '1px solid var(--card-border)'
+              }}
+            >
+              <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--link-color)', fontSize: '0.9rem' }}>&gt;</span>
+              <input
+                type="text"
+                className="form-input"
+                value={consoleInput}
+                onChange={(e) => setConsoleInput(e.target.value)}
+                placeholder="Type input here (e.g. 12 12) and press Enter to run..."
+                style={{
+                  flex: 1,
+                  fontFamily: 'monospace',
+                  fontSize: '0.85rem',
+                  padding: '6px 12px',
+                  borderRadius: '8px'
+                }}
+              />
+              <button
+                type="submit"
+                disabled={isRunning}
+                className="btn btn-primary"
+                style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: '600', whiteSpace: 'nowrap' }}
+              >
+                Send Input
+              </button>
+            </form>
 
           </div>
         </div>
