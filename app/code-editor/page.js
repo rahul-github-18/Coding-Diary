@@ -198,21 +198,6 @@ function CodeEditorContent() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              onClick={() => setShowDockerHelp(true)}
-              className="btn btn-secondary"
-              title="Execution Engines"
-              style={{ padding: '8px 14px', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-              <span>Engines</span>
-            </button>
-
             <button
               onClick={() => setShowSettings(true)}
               className="btn btn-secondary"
@@ -332,25 +317,7 @@ function CodeEditorContent() {
                   </div>
                 )}
               </div>
-            </div>
-
           </div>
-        </div>
-
-        {/* Footer Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          <div>
-            Made with ❤️ by <span style={{ fontWeight: '700', color: 'var(--text-heading)' }}>Rahul Ranjan</span>
-          </div>
-          <a
-            href="https://linkedin.com/in/rahulranjan"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-secondary"
-            style={{ padding: '4px 10px', fontSize: '0.75rem', textDecoration: 'none' }}
-          >
-            LinkedIn
-          </a>
         </div>
 
       </div>
@@ -362,11 +329,6 @@ function CodeEditorContent() {
           onSave={setSettings}
           onClose={() => setShowSettings(false)}
         />
-      )}
-
-      {/* Docker / Execution Engine Help Modal */}
-      {showDockerHelp && (
-        <DockerHelp onClose={() => setShowDockerHelp(false)} />
       )}
     </Layout>
   );
