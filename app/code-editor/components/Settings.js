@@ -30,8 +30,8 @@ export default function Settings({
               onChange={(e) => handleChange("theme", e.target.value)}
               style={{ width: "100%" }}
             >
-              <option value="vs-dark">Dark Theme</option>
               <option value="light">Light Theme</option>
+              <option value="vs-dark">Dark Theme</option>
               <option value="hc-black">High Contrast</option>
             </select>
           </div>

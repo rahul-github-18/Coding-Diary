@@ -647,7 +647,7 @@ body.dark-theme .card:hover {
   border-radius: 12px;
   overflow: hidden;
   position: relative;
-  background-color: #1e1e1e;
+  background-color: var(--card-bg);
 }
 
 /* Modal Overlay & Dialog styles */

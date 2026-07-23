@@ -6,7 +6,7 @@ export default function Editor({
   language,
   value,
   onChange,
-  theme = "vs-dark",
+  theme = "light",
   fontSize = 14,
   tabSize = 2
 }) {

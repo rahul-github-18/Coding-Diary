@@ -48,7 +48,7 @@ function CodeEditorContent() {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState({
     wandboxUrl: "https://wandbox.org",
-    theme: "vs-dark",
+    theme: "light",
     tabSize: 2,
     fontSize: 14
   });
