@@ -8,12 +8,12 @@ import Settings from './components/Settings';
 
 const STARTER_CODES = {
   javascript: `// JavaScript Playground\n// You can use standard JavaScript and console.log for output\n\nfunction fibonacci(n) {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nconst num = 10;\nconsole.log(\`Fibonacci number at position \${num} is: \${fibonacci(num)}\`);\n`,
-  python: `# Python 3 Playground\nimport sys\n\n# Enter input below in the terminal bar if your program asks for input\nprint("Hello from Python 3!")\n`,
-  cpp: `// C++ Playground\n#include <iostream>\nusing namespace std;\n\nint main() {\n    int a = 0, b = 0;\n    if (cin >> a >> b) {\n        cout << "Sum = " << (a + b) << endl;\n    } else {\n        cout << "Hello from C++! (Provide inputs like: 10 20 below)" << endl;\n    }\n    return 0;\n}\n`,
-  c: `// C Playground\n#include <stdio.h>\n\nint main() {\n    int a = 0, b = 0;\n    if (scanf("%d %d", &a, &b) == 2) {\n        printf("Sum = %d\\n", a + b);\n    } else {\n        printf("Hello from C! (Provide inputs like: 10 20 below)\\n");\n    }\n    return 0;\n}\n`,
-  java: `// Java Playground\nimport java.util.*;\n\nclass Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int a = sc.nextInt();\n            int b = sc.nextInt();\n            System.out.println("Sum = " + (a + b));\n        } else {\n            System.out.println("Hello from Java! (Provide inputs like: 10 20 below)");\n        }\n    }\n}\n`,
+  python: `# Python 3 Playground\nimport sys\n\na = int(input("Enter a: "))\nb = int(input("Enter b: "))\nprint(f"Sum = {a + b}")\n`,
+  cpp: `// C++ Playground\n#include <iostream>\nusing namespace std;\n\nint main() {\n    int a = 0, b = 0;\n    cout << "Enter a: ";\n    if (cin >> a) {\n        cout << "Enter b: ";\n        if (cin >> b) {\n            cout << "Sum = " << (a + b) << endl;\n        }\n    }\n    return 0;\n}\n`,
+  c: `// C Playground\n#include <stdio.h>\n\nint main() {\n    int a = 0, b = 0;\n    printf("Enter a: ");\n    if (scanf("%d", &a) == 1) {\n        printf("Enter b: ");\n        if (scanf("%d", &b) == 1) {\n            printf("Sum = %d\\n", a + b);\n        }\n    }\n    return 0;\n}\n`,
+  java: `// Java Playground\nimport java.util.*;\n\nclass Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.print("Enter a: ");\n        if (sc.hasNextInt()) {\n            int a = sc.nextInt();\n            System.out.print("Enter b: ");\n            if (sc.hasNextInt()) {\n                int b = sc.nextInt();\n                System.out.println("Sum = " + (a + b));\n            }\n        }\n    }\n}\n`,
   typescript: `// TypeScript Playground\nfunction fibonacci(n: number): number {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nconst num: number = 10;\nconsole.log(\`Fibonacci number at position \${num} is: \${fibonacci(num)}\`);\n`,
-  go: `// Go Playground\npackage main\nimport "fmt"\n\nfunc main() {\n\tvar a, b int\n\tn, _ := fmt.Scanf("%d %d", &a, &b)\n\tif n == 2 {\n\t\tfmt.Printf("Sum = %d\\n", a+b)\n\t} else {\n\t\tfmt.Println("Hello from Go!")\n\t}\n}\n`,
+  go: `// Go Playground\npackage main\nimport "fmt"\n\nfunc main() {\n\tvar a, b int\n\tfmt.Print("Enter a: ")\n\tif _, err := fmt.Scan(&a); err == nil {\n\t\tfmt.Print("Enter b: ")\n\t\tif _, err := fmt.Scan(&b); err == nil {\n\t\t\tfmt.Printf("Sum = %d\\n", a+b)\n\t\t}\n\t}\n}\n`,
   rust: `// Rust Playground\nfn main() {\n    println!("Hello from Rust!");\n}\n`,
   ruby: `# Ruby Playground\nputs "Hello from Ruby!"\n`,
   php: `<?php\n// PHP Playground\necho "Hello from PHP!\\n";\n`,
@@ -35,16 +35,37 @@ const COMPILER_MAP = {
   csharp: "dotnetcore-8.0.402"
 };
 
+function formatInteractiveOutput(rawOutput, inputsArray) {
+  if (!rawOutput) return "";
+  if (!inputsArray || inputsArray.length === 0) return rawOutput;
+
+  let inputIdx = 0;
+  let result = rawOutput;
+
+  // Interleave user inputs after prompts (e.g. "Enter a: ", "Enter b: ")
+  result = result.replace(/([^:\n]+:\s*)/g, (match) => {
+    if (inputIdx < inputsArray.length) {
+      const val = inputsArray[inputIdx++];
+      return match + val + "\n";
+    }
+    return match;
+  });
+
+  return result;
+}
+
 function CodeEditorContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [language, setLanguage] = useState('javascript');
   const [code, setCode] = useState(STARTER_CODES.javascript);
-  const [stdin, setStdin] = useState('');
+  const [inputsList, setInputsList] = useState([]);
   const [consoleInput, setConsoleInput] = useState('');
   const [output, setOutput] = useState('');
   const [executionError, setExecutionError] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [executionTime, setExecutionTime] = useState(null);
+
+  const consoleInputRef = useRef(null);
 
   // Modals
   const [showSettings, setShowSettings] = useState(false);
@@ -71,19 +92,19 @@ function CodeEditorContent() {
     setExecutionError('');
     setExecutionTime(null);
     setConsoleInput('');
-    setStdin('');
+    setInputsList([]);
   };
 
   const handleReset = () => {
     setCode(STARTER_CODES[language] || '');
-    setStdin('');
+    setInputsList([]);
     setConsoleInput('');
     setOutput('');
     setExecutionError('');
     setExecutionTime(null);
   };
 
-  const runCodeLocalJS = (targetStdin = stdin) => {
+  const runCodeLocalJS = (currentInputs = []) => {
     const startTime = performance.now();
     let logs = [];
     const customConsole = {
@@ -94,8 +115,9 @@ function CodeEditorContent() {
     };
 
     try {
+      const activeStdin = currentInputs.join('\n');
       const runFn = new Function('console', 'stdin', code);
-      runFn(customConsole, targetStdin);
+      runFn(customConsole, activeStdin);
       const endTime = performance.now();
       setOutput(logs.join('\n') || "(Program executed successfully with no output)");
       setExecutionError('');
@@ -110,17 +132,17 @@ function CodeEditorContent() {
     }
   };
 
-  const handleRunCode = async (overrideStdin = null) => {
-    const activeStdin = overrideStdin !== null ? overrideStdin : stdin;
+  const handleRunCode = async (currentInputs = inputsList) => {
     setIsRunning(true);
-    setOutput('');
     setExecutionError('');
     setExecutionTime(null);
+
+    const activeStdin = currentInputs.join('\n');
 
     // If JavaScript or TypeScript local execution
     if (language === 'javascript' || language === 'typescript') {
       setTimeout(() => {
-        runCodeLocalJS(activeStdin);
+        runCodeLocalJS(currentInputs);
       }, 100);
       return;
     }
@@ -154,15 +176,24 @@ function CodeEditorContent() {
       const endTime = performance.now();
       setExecutionTime((endTime - startTime).toFixed(2));
 
-      let resultText = "";
-      if (data.program_output) resultText += data.program_output;
-      if (data.compiler_output) resultText += data.compiler_output;
+      let rawOutputText = "";
+      if (data.program_output) rawOutputText += data.program_output;
+      if (data.compiler_output) rawOutputText += data.compiler_output;
+
+      const formattedOutput = formatInteractiveOutput(rawOutputText, currentInputs);
 
       if (data.status === "0" || !data.status) {
-        setOutput(resultText || "(Program completed with output code 0)");
+        setOutput(formattedOutput || "(Program completed with output code 0)");
+        setExecutionError('');
       } else {
-        setOutput(data.program_output || "");
-        setExecutionError(data.compiler_error || data.program_error || `Process exited with code ${data.status}`);
+        setOutput(formattedOutput || data.program_output || "");
+        // If program output contains prompts (e.g. "Enter b: "), don't treat EOF/NoSuchElement as fatal error, wait for next input!
+        const isWaitingForInput = rawOutputText.trim().endsWith(':') || rawOutputText.includes(': ');
+        if (!isWaitingForInput) {
+          setExecutionError(data.compiler_error || data.program_error || `Process exited with code ${data.status}`);
+        } else {
+          setExecutionError('');
+        }
       }
     } catch (err) {
       console.warn("Wandbox execution error, using fallback:", err);
@@ -171,14 +202,31 @@ function CodeEditorContent() {
       setExecutionError(`Execution Failed: ${err.message}. Please check connection.`);
     } finally {
       setIsRunning(false);
+      // Automatically focus terminal input box after running
+      if (consoleInputRef.current) {
+        consoleInputRef.current.focus();
+      }
     }
   };
 
   const handleConsoleInputSubmit = (e) => {
     e.preventDefault();
-    const inputToUse = consoleInput;
-    setStdin(inputToUse);
-    handleRunCode(inputToUse);
+    if (!consoleInput.trim()) return;
+
+    // Parse input tokens (space or line separated)
+    const newTokens = consoleInput.trim().split(/\s+/);
+    const updatedInputs = [...inputsList, ...newTokens];
+    setInputsList(updatedInputs);
+    setConsoleInput('');
+    handleRunCode(updatedInputs);
+  };
+
+  const handleInitialRunClick = () => {
+    setInputsList([]);
+    setOutput('');
+    setExecutionError('');
+    setConsoleInput('');
+    handleRunCode([]);
   };
 
   return (
@@ -233,7 +281,7 @@ function CodeEditorContent() {
             </button>
 
             <button
-              onClick={() => handleRunCode()}
+              onClick={handleInitialRunClick}
               disabled={isRunning}
               className="btn btn-primary"
               style={{ padding: '8px 20px', fontWeight: '700', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -270,7 +318,7 @@ function CodeEditorContent() {
             />
           </div>
 
-          {/* Right Side: Full Height OUTPUT CONSOLE with Integrated Terminal Input Bar */}
+          {/* Right Side: Full Height OUTPUT CONSOLE with Interactive Terminal Input */}
           <div className="card" style={{ height: '100%', padding: '16px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -287,9 +335,9 @@ function CodeEditorContent() {
                   </span>
                 )}
               </div>
-              {(output || executionError) && (
+              {(output || executionError || inputsList.length > 0) && (
                 <button
-                  onClick={() => { setOutput(''); setExecutionError(''); setExecutionTime(null); setConsoleInput(''); setStdin(''); }}
+                  onClick={() => { setOutput(''); setExecutionError(''); setExecutionTime(null); setConsoleInput(''); setInputsList([]); }}
                   className="btn btn-secondary"
                   style={{ padding: '3px 10px', fontSize: '0.75rem', fontWeight: '600' }}
                 >
@@ -327,11 +375,12 @@ function CodeEditorContent() {
             >
               <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--link-color)', fontSize: '0.9rem' }}>&gt;</span>
               <input
+                ref={consoleInputRef}
                 type="text"
                 className="form-input"
                 value={consoleInput}
                 onChange={(e) => setConsoleInput(e.target.value)}
-                placeholder="Type input here (e.g. 12 12) and press Enter to run..."
+                placeholder="Type input here and press Enter..."
                 style={{
                   flex: 1,
                   fontFamily: 'monospace',
