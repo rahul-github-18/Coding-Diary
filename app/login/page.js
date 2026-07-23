@@ -54,105 +54,88 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-between bg-slate-950 p-4 font-sans select-none text-slate-200">
+    <div className="flex min-h-screen flex-col items-center justify-between bg-slate-50 p-4 font-sans select-none text-slate-800 relative overflow-hidden">
+      {/* Soft Ambient Background Elements */}
+      <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-sky-200/40 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-indigo-200/30 blur-3xl pointer-events-none" />
+
       {/* Main Content Row */}
       <div className="flex-1 flex items-center justify-center w-full z-10">
         {/* Outer Container */}
         <div className="flex flex-col lg:flex-row items-center justify-between w-full max-w-[960px] gap-12 px-4 my-10">
           
-          {/* Left Side: Welcome branding */}
-          <div className="flex-1 flex flex-col justify-center text-left max-w-[480px]">
+          {/* Left Side: Clean & Minimal Welcome branding */}
+          <div className="flex-1 flex flex-col justify-center text-left max-w-[460px]">
             
-            {/* Share Code Link */}
+            {/* Share Code Button Pill */}
             <div className="mb-6">
               <button
                 onClick={() => router.push('/share-code')}
-                className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900/80 text-xs font-medium text-slate-300 hover:text-white hover:border-slate-700 transition duration-150 cursor-pointer"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white/90 backdrop-blur-sm text-xs font-medium text-slate-600 hover:text-slate-900 hover:border-sky-300 hover:bg-white transition-all shadow-sm cursor-pointer"
               >
-                <svg className="h-4 w-4 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="h-4 w-4 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M15 3h6v6" />
                   <path d="M10 14L21 3" />
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                 </svg>
                 <span>Share Code</span>
-                <span className="text-slate-500">•</span>
-                <span className="text-slate-400 font-normal">No Login Required</span>
+                <span className="text-slate-300">•</span>
+                <span className="text-slate-500 font-normal">No Login Required</span>
               </button>
             </div>
 
-            <div className="flex items-center gap-3 mb-3">
+            {/* Brand Logo & Name */}
+            <div className="flex items-center gap-3 mb-4">
               <img
                 src="/logo.png"
                 alt="CodeDiary Logo"
-                className="h-9 w-9 rounded-lg object-contain bg-slate-900 p-1 border border-slate-800"
+                className="h-9 w-9 rounded-xl object-contain bg-white p-1 border border-slate-200 shadow-sm"
               />
-              <span className="text-slate-400 font-medium text-sm">Code Diary</span>
+              <span className="text-slate-900 font-bold text-base tracking-tight">Code Diary</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-4">
-              Your developer learning & productivity workspace
+            {/* Main Title & Brief Subtitle */}
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mb-3 leading-tight">
+              Your developer workspace.
             </h1>
-            <p className="text-slate-400 text-sm leading-relaxed mb-8">
-              Structure curriculum topics, save code snippets, practice questions, and track your daily coding progress in one structured dashboard.
+            <p className="text-slate-600 text-sm leading-relaxed mb-6">
+              Organize topics, save code snippets, and track daily progress in one structured dashboard.
             </p>
             
-            {/* Feature bullets */}
-            <div className="flex flex-col gap-3.5">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 text-sky-400">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="text-slate-200 font-medium text-xs sm:text-sm">Curriculum & Topic Management</h4>
-                  <p className="text-slate-400 text-xs">Organize topics, set difficulty levels, and maintain learning questions.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 text-sky-400">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="text-slate-200 font-medium text-xs sm:text-sm">Code Snippets & Templates</h4>
-                  <p className="text-slate-400 text-xs">Store re-usable starter code, solution notes, and reference implementations.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 text-sky-400">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="text-slate-200 font-medium text-xs sm:text-sm">Daily Activity Metrics</h4>
-                  <p className="text-slate-400 text-xs">Monitor streaks, review progress logs, and track learning momentum.</p>
-                </div>
-              </div>
+            {/* Minimal Feature Tags */}
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200/80 text-xs font-medium text-slate-700 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                Topics & Curriculum
+              </span>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200/80 text-xs font-medium text-slate-700 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                Code Snippets
+              </span>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200/80 text-xs font-medium text-slate-700 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                Activity Metrics
+              </span>
             </div>
           </div>
 
           {/* Right Side: The Login Card */}
-          <div className="w-full max-w-[400px] rounded-xl border border-slate-800 bg-slate-900/90 p-7 shadow-xl">
+          <div className="w-full max-w-[400px] rounded-2xl border border-slate-200/90 bg-white p-7 shadow-xl shadow-slate-200/50 backdrop-blur-sm">
             {/* Card Header */}
             <div className="text-left mb-6">
-              <h2 className="text-xl font-semibold text-white">
+              <h2 className="text-xl font-bold text-slate-900">
                 {isRegisterMode ? 'Create Account' : 'Welcome back'}
               </h2>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 {isRegisterMode ? 'Submit account request for enrollment' : 'Enter your credentials to access your workspace'}
               </p>
             </div>
 
             {/* Mode Selector Tabs */}
-            <div className="flex rounded-lg bg-slate-950 p-1 mb-6 border border-slate-800/80 text-xs font-medium">
+            <div className="flex rounded-xl bg-slate-100 p-1 mb-6 border border-slate-200/60 text-xs font-medium">
               <button
                 type="button"
-                className={`flex-1 rounded-md py-1.5 text-center transition cursor-pointer ${!isRegisterMode ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`flex-1 rounded-lg py-1.5 text-center transition-all cursor-pointer ${!isRegisterMode ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-500 hover:text-slate-900'}`}
                 onClick={() => {
                   setIsRegisterMode(false);
                   setError('');
@@ -163,7 +146,7 @@ const Login = () => {
               </button>
               <button
                 type="button"
-                className={`flex-1 rounded-md py-1.5 text-center transition cursor-pointer ${isRegisterMode ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`flex-1 rounded-lg py-1.5 text-center transition-all cursor-pointer ${isRegisterMode ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-500 hover:text-slate-900'}`}
                 onClick={() => {
                   setIsRegisterMode(true);
                   setError('');
@@ -176,8 +159,8 @@ const Login = () => {
 
             {/* Error Alert Box */}
             {error && (
-              <div className="flex items-center gap-2.5 rounded-lg border border-red-900/50 bg-red-950/40 p-3 text-xs text-red-300 mb-5">
-                <svg className="h-4 w-4 shrink-0 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 mb-5">
+                <svg className="h-4 w-4 shrink-0 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <span>{error}</span>
@@ -186,8 +169,8 @@ const Login = () => {
 
             {/* Success Alert Box */}
             {success && (
-              <div className="flex items-center gap-2.5 rounded-lg border border-emerald-900/50 bg-emerald-950/40 p-3 text-xs text-emerald-300 mb-5">
-                <svg className="h-4 w-4 shrink-0 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 mb-5">
+                <svg className="h-4 w-4 shrink-0 text-emerald-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>{success}</span>
@@ -197,13 +180,13 @@ const Login = () => {
             {/* Login/Register Form */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-slate-300" htmlFor="username">
+                <label className="text-xs font-semibold text-slate-700" htmlFor="username">
                   Username
                 </label>
                 <input
                   type="text"
                   id="username"
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2.5 px-3.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 px-3.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/15"
                   placeholder={isRegisterMode ? "Choose a username" : "Enter username"}
                   value={username}
                   onChange={(e) => {
@@ -216,14 +199,14 @@ const Login = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-slate-300" htmlFor="password">
+                <label className="text-xs font-semibold text-slate-700" htmlFor="password">
                   Password
                 </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     id="password"
-                    className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2.5 pl-3.5 pr-10 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-3.5 pr-10 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/15"
                     placeholder={isRegisterMode ? "Choose a password" : "Enter password"}
                     value={password}
                     onChange={(e) => {
@@ -236,7 +219,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none cursor-pointer"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
                   >
                     {showPassword ? (
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -254,11 +237,11 @@ const Login = () => {
 
               {/* Remember Me & Forgot Password */}
               <div className="flex items-center justify-between text-xs mt-0.5">
-                <label className="flex items-center gap-2 text-slate-400 cursor-pointer">
+                <label className="flex items-center gap-2 text-slate-600 cursor-pointer">
                   <input
                     type="checkbox"
                     defaultChecked
-                    className="rounded border-slate-800 bg-slate-950 text-sky-500 focus:ring-0 h-3.5 w-3.5 cursor-pointer"
+                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 cursor-pointer"
                   />
                   <span>Remember me</span>
                 </label>
@@ -268,7 +251,7 @@ const Login = () => {
                     e.preventDefault();
                     alert('Password reset is managed by the administrator. Please contact the administrator to reset your password.');
                   }}
-                  className="text-slate-400 hover:text-slate-200 transition-colors"
+                  className="text-slate-500 hover:text-sky-600 transition-colors font-medium"
                 >
                   Forgot password?
                 </a>
@@ -276,7 +259,7 @@ const Login = () => {
 
               <button
                 type="submit"
-                className="w-full mt-2 rounded-lg bg-sky-600 hover:bg-sky-500 py-2.5 font-medium text-sm text-white transition duration-150 cursor-pointer disabled:opacity-50"
+                className="w-full mt-2 rounded-xl bg-sky-600 hover:bg-sky-700 py-2.5 font-semibold text-sm text-white shadow-md shadow-sky-600/20 transition duration-150 cursor-pointer disabled:opacity-50"
                 disabled={loading}
               >
                 {loading ? (
@@ -296,14 +279,14 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="w-full max-w-[960px] border-t border-slate-800/80 pt-5 pb-3 flex items-center justify-between text-xs text-slate-400">
+      {/* Clean Light Footer */}
+      <footer className="w-full max-w-[960px] border-t border-slate-200/80 pt-5 pb-3 flex items-center justify-between text-xs text-slate-500 z-10">
         <span>Copyright © 2026 All Rights Reserved</span>
         <a 
           href="https://www.linkedin.com/in/rahul-ranjan-6b2ab424a/" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition"
+          className="inline-flex items-center gap-1.5 text-slate-500 hover:text-sky-600 transition font-medium"
         >
           <svg className="h-3.5 w-3.5 text-[#0a66c2]" fill="currentColor" viewBox="0 0 24 24">
             <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
@@ -316,4 +299,3 @@ const Login = () => {
 };
 
 export default Login;
-

@@ -411,13 +411,13 @@ function ShareCodeContent({ isLoggedIn }) {
 
   // If not logged in, render a customized standalone public page
   return (
-    <div className="flex min-h-screen flex-col items-center justify-between bg-gradient-to-br from-[#0f172a] via-[#1e1e38] to-[#0b0f19] p-4 font-sans select-none relative overflow-hidden">
-      {/* Decorative background glow circles */}
-      <div className="absolute top-1/4 left-1/4 h-80 w-80 rounded-full bg-sky-500/10 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 h-80 w-80 rounded-full bg-violet-500/10 blur-[100px] pointer-events-none" />
+    <div className="flex min-h-screen flex-col items-center justify-between bg-slate-50 p-4 font-sans select-none relative overflow-hidden text-slate-800">
+      {/* Soft Ambient Background Elements */}
+      <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-sky-200/40 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-indigo-200/30 blur-3xl pointer-events-none" />
 
       {/* Standalone Header Navbar */}
-      <div className="w-full max-w-[1200px] flex justify-between items-center z-20 py-4 px-4 border-b border-slate-800/80 mb-6">
+      <div className="w-full max-w-[1200px] flex justify-between items-center z-20 py-4 px-4 border-b border-slate-200/80 mb-6">
         <div 
           onClick={() => router.push('/login')} 
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
@@ -427,7 +427,7 @@ function ShareCodeContent({ isLoggedIn }) {
             alt="CodeDiary Logo" 
             style={{ width: '32px', height: '32px', objectFit: 'contain', borderRadius: '6px' }} 
           />
-          <h1 style={{ fontSize: '1.35rem', margin: 0, fontWeight: '800', color: 'white' }}>CodeDiary</h1>
+          <h1 style={{ fontSize: '1.35rem', margin: 0, fontWeight: '800' }} className="text-slate-900">CodeDiary</h1>
         </div>
         <button
           onClick={() => router.push('/login')}
@@ -441,8 +441,8 @@ function ShareCodeContent({ isLoggedIn }) {
       {/* Main Grid Content */}
       <div className="flex-1 w-full max-w-[1200px] z-10 px-4">
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: '900', color: 'white', marginBottom: '8px' }}>Code Share Center</h2>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
+          <h2 style={{ fontSize: '2rem', fontWeight: '900', marginBottom: '8px' }} className="text-slate-900">Code Share Center</h2>
+          <p style={{ fontSize: '0.9rem', margin: 0 }} className="text-slate-600">
             Instantly share snippets with a temporary 4-digit code. Absolutely free, no signup or login required.
           </p>
         </div>
@@ -450,7 +450,7 @@ function ShareCodeContent({ isLoggedIn }) {
       </div>
 
       {/* Global Footer */}
-      <footer className="w-full max-w-[1200px] border-t border-slate-800/80 pt-6 pb-4 mt-8 flex flex-wrap items-center justify-center gap-3 text-xs text-slate-400 z-10">
+      <footer className="w-full max-w-[1200px] border-t border-slate-200/80 pt-6 pb-4 mt-8 flex flex-wrap items-center justify-center gap-3 text-xs text-slate-500 z-10">
         <span>Copyright © 2026 All Rights Reserved</span>
         <a 
           href="https://www.linkedin.com/in/rahul-ranjan-6b2ab424a/" 
